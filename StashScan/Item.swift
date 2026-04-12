@@ -2,17 +2,22 @@
 //  Item.swift
 //  StashScan
 //
-//  Created by Serenity on 12/04/2026.
-//
 
 import Foundation
 import SwiftData
 
 @Model
 final class Item {
-    var timestamp: Date
-    
-    init(timestamp: Date) {
-        self.timestamp = timestamp
+    var id: UUID
+    var name: String
+    var quantity: Int?
+
+    var container: Container?
+
+    init(name: String, quantity: Int? = nil, container: Container? = nil) {
+        self.id = UUID()
+        self.name = name
+        self.quantity = quantity
+        self.container = container
     }
 }
