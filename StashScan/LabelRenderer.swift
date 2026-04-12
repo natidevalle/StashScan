@@ -13,81 +13,104 @@ enum LabelRenderer {
     // MARK: - Dimensions
 
     static let labelWidthPx: CGFloat  = 384   // Q02E paper width
-    static let labelHeightPx: CGFloat = 200
+    static let labelHeightPx: CGFloat = 280   // content (200) + ~10 mm bottom tear margin (80 px at 203 dpi)
     private static let bytesPerLine   = 48    // 384 / 8
 
     // MARK: - Label image
 
-    /// Renders a label image at exactly 384 × 200 px.
+    /// Renders a label image at exactly 384 × 280 px.
     ///
-    /// IMPORTANT: the renderer is forced to scale = 1.
-    /// UIGraphicsImageRenderer defaults to device screen scale (3× on modern iPhones),
-    /// which makes the backing cgImage 1152 × 600 px. toMonochromeBitmap then draws
-    /// that into a 384 × 600 grayscale context, compressing everything 3× horizontally
-    /// while leaving height unchanged — squashing QR columns and stretching rows so the
-    /// code cannot be scanned. At scale = 1 the cgImage is exactly 384 × 200 px and
-    /// the context dimensions in toMonochromeBitmap always match.
+    /// Layout: QR code fills the left 200 px (10 px padding each side = 180 px square).
+    /// Text column starts flush with the QR top edge and flows downward.
+    /// The bottom 80 px (≈ 10 mm at 203 dpi) is blank — tear margin so the QR is never cut.
+    ///
+    /// IMPORTANT: format.scale = 1 so the backing cgImage is exactly 384 × 280 px.
+    /// At device scale (3×) the cgImage would be 1152 × 840 px and toMonochromeBitmap
+    /// would compress it 3× horizontally, distorting QR modules into tall rectangles.
     static func render(container: Container) -> UIImage {
         let size = CGSize(width: labelWidthPx, height: labelHeightPx)
 
         let format = UIGraphicsImageRendererFormat()
-        format.scale = 1   // 1 px per point — cgImage will be exactly 384 × 200 px
+        format.scale  = 1      // 1 px per point — cgImage exactly matches label dimensions
         format.opaque = true
 
         let renderer = UIGraphicsImageRenderer(size: size, format: format)
 
         return renderer.image { _ in
-            // White background
             UIColor.white.setFill()
             UIRectFill(CGRect(origin: .zero, size: size))
 
-            // QR code — left square, fills height minus padding on all sides
+            // ── Layout constants ───────────────────────────────────────────
             let padding: CGFloat = 10
-            let qrSide = labelHeightPx - padding * 2   // 180 px square
+            // QR and text occupy the top 200 px; the rest is the bottom tear margin.
+            let contentHeight: CGFloat = 200
+            let qrSide = contentHeight - padding * 2   // 180 px square
+
+            // ── QR code (left column) ──────────────────────────────────────
             if let qrImage = QRCodeView.generate(container.qrCode) {
                 qrImage.draw(in: CGRect(x: padding, y: padding, width: qrSide, height: qrSide))
             }
 
-            // Text area — right of QR
-            let textX     = padding + qrSide + padding   // 200 px
-            let textWidth = labelWidthPx - textX - padding  // 174 px
+            // ── Text column (right of QR) ──────────────────────────────────
+            let textX     = padding + qrSide + padding   // 200 px from left edge
+            let textWidth = labelWidthPx - textX - padding  // 174 px wide
 
-            // Paragraph style shared by both text fields:
-            // .byTruncatingTail prevents mid-word character wrapping when a name
-            // or path is wider than the available rect — shows "…" instead.
-            let style = NSMutableParagraphStyle()
-            style.lineBreakMode = .byTruncatingTail
+            // Wrapping style: allows word-wrap so larger fonts can use a second line.
+            let wrapping = NSMutableParagraphStyle()
+            wrapping.lineBreakMode = .byWordWrapping
 
-            // Container name — bold, large
-            let nameFont = UIFont.boldSystemFont(ofSize: 22)
+            // Truncating style: used for notes where overflow should be hidden.
+            let truncating = NSMutableParagraphStyle()
+            truncating.lineBreakMode = .byTruncatingTail
+
+            // Cursor starts at QR top edge — name is top-aligned, not vertically centred.
+            var cursorY: CGFloat = padding
+
+            // 1. Container name — bold 28 pt, up to 2 lines
+            let nameFont = UIFont.boldSystemFont(ofSize: 28)
             let nameAttrs: [NSAttributedString.Key: Any] = [
                 .font: nameFont,
                 .foregroundColor: UIColor.black,
-                .paragraphStyle: style
+                .paragraphStyle: wrapping
             ]
-            let nameString = container.name as NSString
-            let nameHeight: CGFloat = 56
-            let nameY = padding + (qrSide - nameHeight - 28) / 2
-            nameString.draw(
-                in: CGRect(x: textX, y: nameY, width: textWidth, height: nameHeight),
+            let nameHeight = ceil(nameFont.lineHeight) * 2   // ≈ 68 px
+            (container.name as NSString).draw(
+                in: CGRect(x: textX, y: cursorY, width: textWidth, height: nameHeight),
                 withAttributes: nameAttrs
             )
+            cursorY += nameHeight + 5
 
-            // Location path — smaller, gray
-            let pathFont = UIFont.systemFont(ofSize: 15)
+            // 2. Location path — 19 pt, up to 2 lines
+            let pathFont = UIFont.systemFont(ofSize: 19)
             let pathAttrs: [NSAttributedString.Key: Any] = [
                 .font: pathFont,
                 .foregroundColor: UIColor.darkGray,
-                .paragraphStyle: style
+                .paragraphStyle: wrapping
             ]
             let locName  = container.zone?.location?.name ?? "?"
             let zoneName = container.zone?.name ?? "?"
-            let path     = "\(locName) › \(zoneName)" as NSString
-            let pathY    = nameY + nameHeight + 4
-            path.draw(
-                in: CGRect(x: textX, y: pathY, width: textWidth, height: 36),
+            let pathHeight = ceil(pathFont.lineHeight) * 2   // ≈ 46 px
+            ("\(locName) › \(zoneName)" as NSString).draw(
+                in: CGRect(x: textX, y: cursorY, width: textWidth, height: pathHeight),
                 withAttributes: pathAttrs
             )
+            cursorY += pathHeight + 4
+
+            // 3. Notes — 14 pt, up to 2 lines, only rendered when non-empty
+            let notes = container.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !notes.isEmpty {
+                let notesFont = UIFont.systemFont(ofSize: 14)
+                let notesAttrs: [NSAttributedString.Key: Any] = [
+                    .font: notesFont,
+                    .foregroundColor: UIColor.lightGray,
+                    .paragraphStyle: truncating
+                ]
+                let notesHeight = ceil(notesFont.lineHeight) * 2   // ≈ 34 px
+                (notes as NSString).draw(
+                    in: CGRect(x: textX, y: cursorY, width: textWidth, height: notesHeight),
+                    withAttributes: notesAttrs
+                )
+            }
         }
     }
 
