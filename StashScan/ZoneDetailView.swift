@@ -14,19 +14,28 @@ struct ZoneDetailView: View {
 
     let zone: Zone
 
+    // @Query filtered by zone.id drives the list reactively — inserts in the
+    // add-container sheet update this immediately without any navigation required.
+    @Query private var containers: [Container]
+
     @State private var showAddContainer = false
     @State private var containerToDelete: Container? = nil
     @State private var showContainerDeleteConfirm = false
     @State private var showEditZone = false
     @State private var showDeleteZone = false
 
-    var sortedContainers: [Container] {
-        zone.containers.sorted { $0.name < $1.name }
+    init(zone: Zone) {
+        self.zone = zone
+        let id = zone.id
+        _containers = Query(
+            filter: #Predicate<Container> { $0.zone?.id == id },
+            sort: \Container.name
+        )
     }
 
     var body: some View {
         List {
-            ForEach(sortedContainers) { container in
+            ForEach(containers) { container in
                 NavigationLink(destination: ContainerDetailView(container: container)) {
                     HStack(spacing: 12) {
                         Image(systemName: iconName(for: container.type))
@@ -52,7 +61,7 @@ struct ZoneDetailView: View {
         .navigationTitle(zone.name)
         .navigationBarTitleDisplayMode(.large)
         .overlay {
-            if zone.containers.isEmpty {
+            if containers.isEmpty {
                 ContentUnavailableView(
                     "No Containers",
                     systemImage: "archivebox",
@@ -129,7 +138,7 @@ struct ZoneDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            let containerCount = zone.containers.count
+            let containerCount = containers.count
             if containerCount > 0 {
                 Text("This will delete \(containerCount) container\(containerCount == 1 ? "" : "s") and all their contents.")
             } else {

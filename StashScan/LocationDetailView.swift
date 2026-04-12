@@ -14,6 +14,12 @@ struct LocationDetailView: View {
 
     let location: Location
 
+    // @Query filtered by location.id drives the list reactively — inserts in the
+    // add-zone sheet update this immediately without any navigation required.
+    // Reading location.zones directly from the @Model relationship does NOT reliably
+    // fire @Observable notifications when a child is inserted via modelContext.insert().
+    @Query private var zones: [Zone]
+
     @State private var showAddZone = false
     @State private var zoneToEdit: Zone? = nil
     @State private var zoneToDelete: Zone? = nil
@@ -21,13 +27,18 @@ struct LocationDetailView: View {
     @State private var showEditLocation = false
     @State private var showDeleteLocation = false
 
-    var sortedZones: [Zone] {
-        location.zones.sorted { $0.name < $1.name }
+    init(location: Location) {
+        self.location = location
+        let id = location.id
+        _zones = Query(
+            filter: #Predicate<Zone> { $0.location?.id == id },
+            sort: \Zone.name
+        )
     }
 
     var body: some View {
         List {
-            ForEach(sortedZones) { zone in
+            ForEach(zones) { zone in
                 NavigationLink(destination: ZoneDetailView(zone: zone)) {
                     Label(zone.name, systemImage: "square.split.2x1")
                 }
@@ -52,7 +63,7 @@ struct LocationDetailView: View {
         .navigationTitle(location.name)
         .navigationBarTitleDisplayMode(.large)
         .overlay {
-            if location.zones.isEmpty {
+            if zones.isEmpty {
                 ContentUnavailableView(
                     "No Zones",
                     systemImage: "square.dashed",
@@ -127,8 +138,8 @@ struct LocationDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            let zoneCount = location.zones.count
-            let containerCount = location.zones.reduce(0) { $0 + $1.containers.count }
+            let zoneCount = zones.count
+            let containerCount = zones.reduce(0) { $0 + $1.containers.count }
             if containerCount > 0 {
                 Text("This will delete \(zoneCount) zone\(zoneCount == 1 ? "" : "s") and \(containerCount) container\(containerCount == 1 ? "" : "s") and all their contents.")
             } else if zoneCount > 0 {
