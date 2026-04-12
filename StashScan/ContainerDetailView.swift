@@ -79,6 +79,17 @@ struct ContainerDetailView: View {
                 }
             }
 
+            // ── QR Code ────────────────────────────────────────────────
+            Section("QR Code") {
+                HStack {
+                    Spacer()
+                    QRCodeView(uuid: container.qrCode)
+                        .frame(width: 180, height: 180)
+                    Spacer()
+                }
+                .padding(.vertical, 8)
+            }
+
             // ── Photo ──────────────────────────────────────────────────
             Section("Photo") {
                 if let photoPath = container.photo,

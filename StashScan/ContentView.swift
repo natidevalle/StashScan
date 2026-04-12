@@ -18,8 +18,12 @@ struct ContentView: View {
     @State private var locationToDelete: Location? = nil
     @State private var showDeleteConfirm = false
 
+    // Scanner + programmatic navigation
+    @State private var showScanner = false
+    @State private var navigationPath = NavigationPath()
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             List {
                 ForEach(locations) { location in
                     NavigationLink(destination: LocationDetailView(location: location)) {
@@ -70,13 +74,18 @@ struct ContentView: View {
                 ToolbarItem(placement: .bottomBar) { Spacer() }
                 ToolbarItem(placement: .bottomBar) {
                     Button {
-                        // TODO: open QR/barcode scanner
+                        showScanner = true
                     } label: {
                         Label("Scan", systemImage: "qrcode.viewfinder")
                             .font(.headline)
                     }
                 }
                 ToolbarItem(placement: .bottomBar) { Spacer() }
+            }
+            // Programmatic destination for scan results — jumps straight to
+            // ContainerDetailView without navigating through the hierarchy.
+            .navigationDestination(for: Container.self) { container in
+                ContainerDetailView(container: container)
             }
             .sheet(isPresented: $showAddLocation) {
                 AddEditLocationView()
@@ -101,6 +110,17 @@ struct ContentView: View {
             } message: {
                 if let loc = locationToDelete {
                     Text(deleteMessage(for: loc))
+                }
+            }
+        }
+        // Full-screen scanner — presented outside the NavigationStack so it
+        // doesn't inherit the nav bar, giving the camera a clean full-screen look.
+        .fullScreenCover(isPresented: $showScanner) {
+            ScannerView { container in
+                showScanner = false
+                // Brief delay lets the dismiss animation finish before pushing
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    navigationPath.append(container)
                 }
             }
         }
