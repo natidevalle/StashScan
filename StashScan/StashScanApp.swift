@@ -12,6 +12,9 @@ import SwiftData
 struct StashScanApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
+            Location.self,
+            Zone.self,
+            Container.self,
             Item.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)

@@ -20,7 +20,7 @@ final class Container {
     var id: UUID
     var name: String
     var type: ContainerType
-    var description: String
+    var notes: String
     var photo: String?
     var locationId: UUID
     var zoneId: UUID
@@ -36,7 +36,7 @@ final class Container {
     init(
         name: String,
         type: ContainerType,
-        description: String = "",
+        notes: String = "",
         photo: String? = nil,
         locationId: UUID,
         zoneId: UUID,
@@ -47,7 +47,7 @@ final class Container {
         self.id = containerID
         self.name = name
         self.type = type
-        self.description = description
+        self.notes = notes
         self.photo = photo
         self.locationId = locationId
         self.zoneId = zoneId
