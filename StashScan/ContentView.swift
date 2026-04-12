@@ -25,6 +25,12 @@ private struct SearchResult: Identifiable {
     }
 }
 
+// MARK: - App routes (non-model navigation values)
+
+private enum AppRoute: Hashable {
+    case settings
+}
+
 // MARK: - ContentView
 
 struct ContentView: View {
@@ -96,7 +102,7 @@ struct ContentView: View {
                 if trimmedQuery.isEmpty {
                     // ── Normal hierarchy ───────────────────────────────
                     ForEach(locations) { location in
-                        NavigationLink(destination: LocationDetailView(location: location)) {
+                        NavigationLink(value: location) {
                             Label(location.name, systemImage: "house")
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -135,7 +141,7 @@ struct ContentView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: SettingsView()) {
+                    NavigationLink(value: AppRoute.settings) {
                         Label("Settings", systemImage: "gear")
                     }
                 }
@@ -148,10 +154,21 @@ struct ContentView: View {
                 }
                 ToolbarItem(placement: .bottomBar) { Spacer() }
             }
-            // Programmatic destination: scan result jumps straight to ContainerDetailView.
-            // Also used by search result NavigationLink(value:) rows.
+            // All value-based navigation destinations are registered here at the root
+            // NavigationStack so every pushed view shares the same destination registry.
+            .navigationDestination(for: Location.self) { location in
+                LocationDetailView(location: location)
+            }
+            .navigationDestination(for: Zone.self) { zone in
+                ZoneDetailView(zone: zone)
+            }
             .navigationDestination(for: Container.self) { container in
                 ContainerDetailView(container: container)
+            }
+            .navigationDestination(for: AppRoute.self) { route in
+                switch route {
+                case .settings: SettingsView()
+                }
             }
             .sheet(isPresented: $showAddLocation) {
                 AddEditLocationView()

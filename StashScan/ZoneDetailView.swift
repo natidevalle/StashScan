@@ -41,7 +41,7 @@ struct ZoneDetailView: View {
     var body: some View {
         List {
             ForEach(containers) { container in
-                NavigationLink(destination: ContainerDetailView(container: container)) {
+                NavigationLink(value: container) {
                     HStack(spacing: 12) {
                         Image(systemName: iconName(for: container.type))
                             .foregroundStyle(.secondary)

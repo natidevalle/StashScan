@@ -39,7 +39,7 @@ struct LocationDetailView: View {
     var body: some View {
         List {
             ForEach(zones) { zone in
-                NavigationLink(destination: ZoneDetailView(zone: zone)) {
+                NavigationLink(value: zone) {
                     Label(zone.name, systemImage: "square.split.2x1")
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
