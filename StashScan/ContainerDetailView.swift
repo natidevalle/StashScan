@@ -18,6 +18,7 @@ struct ContainerDetailView: View {
     // Sheet / alert presentation
     @State private var showEditContainer = false
     @State private var showMoveContainer = false
+    @State private var showPrintPreview  = false
     @State private var showDeleteConfirm = false
     @State private var showFullScreenPhoto = false
 
@@ -192,11 +193,10 @@ struct ContainerDetailView: View {
                     Label("Move Container", systemImage: "arrow.up.right.square")
                 }
                 Button {
-                    // TODO: Phase 5 — BLE print to Phomemo Q02E
+                    showPrintPreview = true
                 } label: {
                     Label("Print Label", systemImage: "printer")
                 }
-                .foregroundStyle(.secondary)
                 Button(role: .destructive) {
                     showDeleteConfirm = true
                 } label: {
@@ -244,6 +244,10 @@ struct ContainerDetailView: View {
         // Move sheet
         .sheet(isPresented: $showMoveContainer) {
             MoveContainerView(container: container)
+        }
+        // Print preview sheet
+        .sheet(isPresented: $showPrintPreview) {
+            PrintPreviewView(container: container)
         }
         // Full-screen photo
         .fullScreenCover(isPresented: $showFullScreenPhoto) {

@@ -256,6 +256,7 @@
 				DEVELOPMENT_TEAM = 7YJM6MDS32;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "StashScan uses Bluetooth to print labels on your Phomemo Q02E printer.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StashScan uses the camera to scan QR code labels and to take photos of containers.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StashScan uses your photo library to attach photos to containers.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -291,6 +292,7 @@
 				DEVELOPMENT_TEAM = 7YJM6MDS32;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "StashScan uses Bluetooth to print labels on your Phomemo Q02E printer.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StashScan uses the camera to scan QR code labels and to take photos of containers.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StashScan uses your photo library to attach photos to containers.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -10,6 +10,8 @@ import SwiftData
 
 @main
 struct StashScanApp: App {
+    @State private var printer = PhomemoPrinter()
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Location.self,
@@ -29,6 +31,7 @@ struct StashScanApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(printer)
         }
         .modelContainer(sharedModelContainer)
     }
