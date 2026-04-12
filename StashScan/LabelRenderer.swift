@@ -96,13 +96,18 @@ enum LabelRenderer {
             )
             cursorY += pathHeight + 4
 
-            // 3. Notes — 14 pt, up to 2 lines, only rendered when non-empty
+            // 3. Notes — 14 pt, up to 2 lines, only rendered when non-empty.
+            //
+            // Color must have luma < 128 to survive toMonochromeBitmap's threshold.
+            // UIColor.lightGray is white=0.667 → luma≈170, which is above the threshold
+            // and gets treated as white (no ink). white=0.45 → luma≈115, prints reliably
+            // while still appearing lighter than darkGray (white=0.33) on screen.
             let notes = container.notes.trimmingCharacters(in: .whitespacesAndNewlines)
             if !notes.isEmpty {
                 let notesFont = UIFont.systemFont(ofSize: 14)
                 let notesAttrs: [NSAttributedString.Key: Any] = [
                     .font: notesFont,
-                    .foregroundColor: UIColor.lightGray,
+                    .foregroundColor: UIColor(white: 0.45, alpha: 1.0),
                     .paragraphStyle: truncating
                 ]
                 let notesHeight = ceil(notesFont.lineHeight) * 2   // ≈ 34 px
