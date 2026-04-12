@@ -18,32 +18,52 @@ enum LabelRenderer {
 
     // MARK: - Label image
 
-    /// Renders a label image at 384 × 200 px (1× scale, already device-independent).
+    /// Renders a label image at exactly 384 × 200 px.
+    ///
+    /// IMPORTANT: the renderer is forced to scale = 1.
+    /// UIGraphicsImageRenderer defaults to device screen scale (3× on modern iPhones),
+    /// which makes the backing cgImage 1152 × 600 px. toMonochromeBitmap then draws
+    /// that into a 384 × 600 grayscale context, compressing everything 3× horizontally
+    /// while leaving height unchanged — squashing QR columns and stretching rows so the
+    /// code cannot be scanned. At scale = 1 the cgImage is exactly 384 × 200 px and
+    /// the context dimensions in toMonochromeBitmap always match.
     static func render(container: Container) -> UIImage {
         let size = CGSize(width: labelWidthPx, height: labelHeightPx)
-        let renderer = UIGraphicsImageRenderer(size: size)
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1   // 1 px per point — cgImage will be exactly 384 × 200 px
+        format.opaque = true
+
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
 
         return renderer.image { _ in
             // White background
             UIColor.white.setFill()
             UIRectFill(CGRect(origin: .zero, size: size))
 
-            // QR code — left square
+            // QR code — left square, fills height minus padding on all sides
             let padding: CGFloat = 10
-            let qrSide = labelHeightPx - padding * 2
+            let qrSide = labelHeightPx - padding * 2   // 180 px square
             if let qrImage = QRCodeView.generate(container.qrCode) {
                 qrImage.draw(in: CGRect(x: padding, y: padding, width: qrSide, height: qrSide))
             }
 
             // Text area — right of QR
-            let textX     = padding + qrSide + padding
-            let textWidth = labelWidthPx - textX - padding
+            let textX     = padding + qrSide + padding   // 200 px
+            let textWidth = labelWidthPx - textX - padding  // 174 px
+
+            // Paragraph style shared by both text fields:
+            // .byTruncatingTail prevents mid-word character wrapping when a name
+            // or path is wider than the available rect — shows "…" instead.
+            let style = NSMutableParagraphStyle()
+            style.lineBreakMode = .byTruncatingTail
 
             // Container name — bold, large
             let nameFont = UIFont.boldSystemFont(ofSize: 22)
             let nameAttrs: [NSAttributedString.Key: Any] = [
                 .font: nameFont,
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
+                .paragraphStyle: style
             ]
             let nameString = container.name as NSString
             let nameHeight: CGFloat = 56
@@ -57,7 +77,8 @@ enum LabelRenderer {
             let pathFont = UIFont.systemFont(ofSize: 15)
             let pathAttrs: [NSAttributedString.Key: Any] = [
                 .font: pathFont,
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
+                .paragraphStyle: style
             ]
             let locName  = container.zone?.location?.name ?? "?"
             let zoneName = container.zone?.name ?? "?"
