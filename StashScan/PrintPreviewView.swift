@@ -14,7 +14,7 @@ struct PrintPreviewView: View {
 
     let container: Container
 
-    // Compute once; stays stable for the sheet lifetime
+    // Rendered once at init; stable for the sheet's lifetime
     private let labelImage: UIImage
 
     init(container: Container) {
@@ -28,6 +28,8 @@ struct PrintPreviewView: View {
                 VStack(spacing: 24) {
                     labelPreview
                         .padding(.top, 24)
+
+                    statusBadge
 
                     printerSection
                 }
@@ -59,7 +61,47 @@ struct PrintPreviewView: View {
             )
     }
 
-    // MARK: - Printer status section
+    // MARK: - Persistent status badge
+    // Always visible so the user can see exactly which stage the connection is at.
+
+    private var statusBadge: some View {
+        HStack(spacing: 8) {
+            statusDot
+            Text(printer.state.statusLabel)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(statusColor)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(statusColor.opacity(0.10), in: Capsule())
+        .animation(.easeInOut(duration: 0.2), value: printer.state)
+    }
+
+    private var statusDot: some View {
+        Group {
+            if printer.state.isWorking {
+                ProgressView()
+                    .scaleEffect(0.7)
+                    .tint(statusColor)
+            } else {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 8, height: 8)
+            }
+        }
+    }
+
+    private var statusColor: Color {
+        switch printer.state {
+        case .ready:                return .green
+        case .error:                return .red
+        case .bluetoothUnavailable: return .red
+        case .scanning, .connecting, .printing: return .orange
+        case .disconnected:         return .secondary
+        }
+    }
+
+    // MARK: - Printer section
 
     @ViewBuilder
     private var printerSection: some View {
@@ -77,34 +119,36 @@ struct PrintPreviewView: View {
                 firstTimePairingHint
                 connectButton
 
-            case .error(let msg):
-                Label(msg, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
+            case .error:
+                Text("Tap Connect to try again.")
                     .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 connectButton
 
             case .scanning:
-                progressRow("Scanning for printer…")
+                VStack(alignment: .leading, spacing: 8) {
+                    progressRow("Scanning for Phomemo Q02E…")
+                    Text("Make sure the printer is powered on and within range.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
             case .connecting:
-                progressRow("Connecting…")
+                progressRow("Connecting to printer…")
 
             case .ready:
                 HStack(spacing: 10) {
                     Image(systemName: "printer.fill")
                         .foregroundStyle(.green)
                     Text("Phomemo Q02E – Ready")
-                        .foregroundStyle(.primary)
                     Spacer()
-                    Button("Disconnect") {
-                        printer.disconnectAndForget()
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    Button("Disconnect") { printer.disconnectAndForget() }
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
 
             case .printing:
-                progressRow("Printing…")
+                progressRow("Sending data to printer…")
             }
         }
         .padding()
