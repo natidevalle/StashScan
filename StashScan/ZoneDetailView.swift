@@ -27,8 +27,13 @@ struct ZoneDetailView: View {
     init(zone: Zone) {
         self.zone = zone
         let id = zone.id
+        // Filter by zoneId (a plain stored UUID on Container) rather than zone?.id.
+        // #Predicate cannot reliably translate optional relationship chains (?.id) into
+        // a valid NSPredicate at runtime — the query silently returns nothing and
+        // the NavigationLink destination breaks. zoneId is always kept in sync with
+        // zone.id, so the result is identical but the predicate compiles cleanly.
         _containers = Query(
-            filter: #Predicate<Container> { $0.zone?.id == id },
+            filter: #Predicate<Container> { $0.zoneId == id },
             sort: \Container.name
         )
     }
