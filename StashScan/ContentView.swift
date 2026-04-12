@@ -11,7 +11,12 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Location.name) private var locations: [Location]
+
     @State private var searchText = ""
+    @State private var showAddLocation = false
+    @State private var locationToEdit: Location? = nil
+    @State private var locationToDelete: Location? = nil
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         NavigationStack {
@@ -19,6 +24,22 @@ struct ContentView: View {
                 ForEach(locations) { location in
                     NavigationLink(destination: LocationDetailView(location: location)) {
                         Label(location.name, systemImage: "house")
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            locationToDelete = location
+                            showDeleteConfirm = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    .swipeActions(edge: .leading) {
+                        Button {
+                            locationToEdit = location
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        .tint(.blue)
                     }
                 }
             }
@@ -29,20 +50,24 @@ struct ContentView: View {
                     ContentUnavailableView(
                         "No Locations",
                         systemImage: "house.slash",
-                        description: Text("Add a location to start organising your stash.")
+                        description: Text("Tap + to add your first location.")
                     )
                 }
             }
-            .onAppear(perform: seedSampleDataIfNeeded)
             .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showAddLocation = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: SettingsView()) {
                         Label("Settings", systemImage: "gear")
                     }
                 }
-                ToolbarItem(placement: .bottomBar) {
-                    Spacer()
-                }
+                ToolbarItem(placement: .bottomBar) { Spacer() }
                 ToolbarItem(placement: .bottomBar) {
                     Button {
                         // TODO: open QR/barcode scanner
@@ -51,51 +76,46 @@ struct ContentView: View {
                             .font(.headline)
                     }
                 }
-                ToolbarItem(placement: .bottomBar) {
-                    Spacer()
+                ToolbarItem(placement: .bottomBar) { Spacer() }
+            }
+            .sheet(isPresented: $showAddLocation) {
+                AddEditLocationView()
+            }
+            .sheet(item: $locationToEdit) { location in
+                AddEditLocationView(location: location)
+            }
+            .confirmationDialog(
+                "Delete \"\(locationToDelete?.name ?? "")\"?",
+                isPresented: $showDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let loc = locationToDelete {
+                        loc.delete(from: modelContext)
+                    }
+                    locationToDelete = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    locationToDelete = nil
+                }
+            } message: {
+                if let loc = locationToDelete {
+                    Text(deleteMessage(for: loc))
                 }
             }
         }
     }
-    private func seedSampleDataIfNeeded() {
-        guard locations.isEmpty else { return }
 
-        let garage  = Location(name: "Garage")
-        let basement = Location(name: "Basement")
-        let office  = Location(name: "Home Office")
-        modelContext.insert(garage)
-        modelContext.insert(basement)
-        modelContext.insert(office)
-
-        let wallShelves = Zone(name: "Wall Shelves", location: garage)
-        let workbench   = Zone(name: "Workbench",    location: garage)
-        modelContext.insert(wallShelves)
-        modelContext.insert(workbench)
-
-        let storageArea = Zone(name: "Storage Area",   location: basement)
-        let laundry     = Zone(name: "Laundry Corner", location: basement)
-        modelContext.insert(storageArea)
-        modelContext.insert(laundry)
-
-        let deskDrawers = Zone(name: "Desk Drawers", location: office)
-        modelContext.insert(deskDrawers)
-
-        modelContext.insert(Container(
-            name: "Tool Box", type: .box,
-            notes: "Hand tools — hammer, screwdrivers, pliers",
-            locationId: garage.id, zoneId: wallShelves.id, zone: wallShelves))
-        modelContext.insert(Container(
-            name: "Cables Bin", type: .bin,
-            notes: "USB-A, HDMI, and extension cables",
-            locationId: garage.id, zoneId: wallShelves.id, zone: wallShelves))
-        modelContext.insert(Container(
-            name: "Holiday Decorations", type: .box,
-            notes: "Christmas ornaments and lights",
-            locationId: basement.id, zoneId: storageArea.id, zone: storageArea))
-        modelContext.insert(Container(
-            name: "Office Supplies", type: .drawer,
-            notes: "Pens, sticky notes, tape",
-            locationId: office.id, zoneId: deskDrawers.id, zone: deskDrawers))
+    private func deleteMessage(for location: Location) -> String {
+        let zoneCount = location.zones.count
+        let containerCount = location.zones.reduce(0) { $0 + $1.containers.count }
+        if containerCount > 0 {
+            return "This will delete \(zoneCount) zone\(zoneCount == 1 ? "" : "s") and \(containerCount) container\(containerCount == 1 ? "" : "s") and all their contents."
+        } else if zoneCount > 0 {
+            return "This will delete \(zoneCount) zone\(zoneCount == 1 ? "" : "s")."
+        } else {
+            return "This location is empty."
+        }
     }
 }
 

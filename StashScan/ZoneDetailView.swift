@@ -2,14 +2,23 @@
 //  ZoneDetailView.swift
 //  StashScan
 //
-//  Shows the containers inside a zone.
+//  Shows the containers inside a zone, with add/delete actions.
 //
 
 import SwiftUI
 import SwiftData
 
 struct ZoneDetailView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
     let zone: Zone
+
+    @State private var showAddContainer = false
+    @State private var containerToDelete: Container? = nil
+    @State private var showContainerDeleteConfirm = false
+    @State private var showEditZone = false
+    @State private var showDeleteZone = false
 
     var sortedContainers: [Container] {
         zone.containers.sorted { $0.name < $1.name }
@@ -30,6 +39,14 @@ struct ZoneDetailView: View {
                         }
                     }
                 }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) {
+                        containerToDelete = container
+                        showContainerDeleteConfirm = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
             }
         }
         .navigationTitle(zone.name)
@@ -39,8 +56,84 @@ struct ZoneDetailView: View {
                 ContentUnavailableView(
                     "No Containers",
                     systemImage: "archivebox",
-                    description: Text("No containers in this zone yet.")
+                    description: Text("Tap + to add the first container.")
                 )
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showAddContainer = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button {
+                        showEditZone = true
+                    } label: {
+                        Label("Edit Zone Name", systemImage: "pencil")
+                    }
+                    Divider()
+                    Button(role: .destructive) {
+                        showDeleteZone = true
+                    } label: {
+                        Label("Delete Zone", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .sheet(isPresented: $showAddContainer) {
+            AddEditContainerView(zone: zone)
+        }
+        .sheet(isPresented: $showEditZone) {
+            if let location = zone.location {
+                AddEditZoneView(location: location, zone: zone)
+            }
+        }
+        .confirmationDialog(
+            "Delete \"\(containerToDelete?.name ?? "")\"?",
+            isPresented: $showContainerDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let c = containerToDelete {
+                    c.delete(from: modelContext)
+                }
+                containerToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                containerToDelete = nil
+            }
+        } message: {
+            if let c = containerToDelete {
+                let count = c.items.count
+                if count > 0 {
+                    Text("This will delete \(count) item\(count == 1 ? "" : "s") inside this container.")
+                } else {
+                    Text("This container is empty.")
+                }
+            }
+        }
+        .confirmationDialog(
+            "Delete \"\(zone.name)\"?",
+            isPresented: $showDeleteZone,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                zone.delete(from: modelContext)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            let containerCount = zone.containers.count
+            if containerCount > 0 {
+                Text("This will delete \(containerCount) container\(containerCount == 1 ? "" : "s") and all their contents.")
+            } else {
+                Text("This zone is empty.")
             }
         }
     }
