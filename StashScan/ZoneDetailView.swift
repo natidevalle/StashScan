@@ -33,7 +33,7 @@ struct ZoneDetailView: View {
             ForEach(containers) { container in
                 NavigationLink(value: container) {
                     HStack(spacing: 12) {
-                        ListIcon(symbol: "shippingbox.fill")
+                        ListIcon(symbol: "shippingbox")
                         Text(container.name)
                     }
                 }

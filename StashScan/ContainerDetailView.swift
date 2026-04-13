@@ -2,7 +2,7 @@
 //  ContainerDetailView.swift
 //  StashScan
 //
-//  Full detail screen for a container: hero card, items, actions.
+//  Full detail screen for a container: hero, items, actions.
 //
 
 import SwiftUI
@@ -17,24 +17,25 @@ struct ContainerDetailView: View {
 
     let container: Container
 
-    // Sheet / alert presentation
-    @State private var showEditContainer  = false
-    @State private var showMoveContainer  = false
-    @State private var showPrintPreview   = false
-    @State private var showDeleteConfirm  = false
+    // Sheets / alerts
+    @State private var showEditContainer   = false
+    @State private var showMoveContainer   = false
+    @State private var showPrintPreview    = false
+    @State private var showDeleteConfirm   = false
     @State private var showFullScreenPhoto = false
 
-    // Photo picking (for the placeholder tap on hero card)
+    // Photo picking (placeholder tap)
     @State private var showPhotoActionSheet = false
     @State private var showPhotoLibrary     = false
     @State private var showCamera           = false
     @State private var photoItem: PhotosPickerItem? = nil
 
     // Inline item add
-    @State private var isAddingItem   = false
-    @State private var newItemName    = ""
-    @State private var newItemQty     = ""
-    @FocusState private var addItemFocused: Bool
+    enum ItemField: Hashable { case name, qty }
+    @State private var isAddingItem = false
+    @State private var newItemName  = ""
+    @State private var newItemQty   = ""
+    @FocusState private var itemFocus: ItemField?
 
     // MARK: Computed
 
@@ -47,7 +48,7 @@ struct ContainerDetailView: View {
     private var locationPath: String {
         let loc  = container.zone?.location?.name ?? "Unknown Location"
         let zone = container.zone?.name ?? "Unknown Zone"
-        return "\(loc) › \(zone)"
+        return "\(loc) > \(zone)"
     }
 
     private static let dateFmt: DateFormatter = {
@@ -60,7 +61,7 @@ struct ContainerDetailView: View {
 
     var body: some View {
         List {
-            heroCard
+            heroSection
             itemsSection
             actionsSection
         }
@@ -69,12 +70,12 @@ struct ContainerDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showEditContainer = true } label: {
-                    Image(systemName: "square.and.pencil")
+                    Image(systemName: "pencil")
                 }
             }
         }
         .scrollDismissesKeyboard(.interactively)
-        // Photo action sheet (from placeholder tap)
+        // Photo action sheet (placeholder tap)
         .confirmationDialog("Add Photo", isPresented: $showPhotoActionSheet) {
             Button("Choose from Library") { showPhotoLibrary = true }
             if UIImagePickerController.isSourceTypeAvailable(.camera) {
@@ -84,39 +85,26 @@ struct ContainerDetailView: View {
         }
         .photosPicker(isPresented: $showPhotoLibrary, selection: $photoItem, matching: .images)
         .sheet(isPresented: $showCamera) {
-            CameraPickerView(isPresented: $showCamera) { image in
-                savePhoto(image)
-            }
+            CameraPickerView(isPresented: $showCamera) { image in savePhoto(image) }
         }
         .onChange(of: photoItem) { _, newItem in
             Task {
                 guard let newItem else { return }
                 if let data = try? await newItem.loadTransferable(type: Data.self),
-                   let image = UIImage(data: data) {
-                    savePhoto(image)
-                }
+                   let image = UIImage(data: data) { savePhoto(image) }
                 photoItem = nil
             }
         }
-        // Edit sheet
         .sheet(isPresented: $showEditContainer) {
             if let zone = container.zone {
                 AddEditContainerView(zone: zone, container: container)
             }
         }
-        // Move sheet
-        .sheet(isPresented: $showMoveContainer) {
-            MoveContainerView(container: container)
-        }
-        // Print preview sheet
-        .sheet(isPresented: $showPrintPreview) {
-            PrintPreviewView(container: container)
-        }
-        // Full-screen photo
+        .sheet(isPresented: $showMoveContainer)  { MoveContainerView(container: container) }
+        .sheet(isPresented: $showPrintPreview)   { PrintPreviewView(container: container) }
         .fullScreenCover(isPresented: $showFullScreenPhoto) {
             FullScreenPhotoView(photoPath: container.photo ?? "")
         }
-        // Delete confirmation
         .confirmationDialog(
             "Delete \"\(container.name)\"?",
             isPresented: $showDeleteConfirm,
@@ -132,27 +120,35 @@ struct ContainerDetailView: View {
                 Text("This container is empty.")
             }
         }
-        // Auto-focus when add row appears
-        .onChange(of: isAddingItem) { _, newValue in
-            if newValue { addItemFocused = true }
+        // Dismiss item add row when focus moves fully away
+        .onChange(of: itemFocus) { _, newFocus in
+            guard newFocus == nil, isAddingItem else { return }
+            Task { @MainActor in
+                await Task.yield()
+                if itemFocus == nil {
+                    isAddingItem = false
+                    newItemName  = ""
+                    newItemQty   = ""
+                }
+            }
         }
     }
 
-    // MARK: - Hero card
+    // MARK: - Hero (full-bleed page header)
 
     @ViewBuilder
-    private var heroCard: some View {
+    private var heroSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 0) {
 
-                // ── Photo strip ───────────────────────────────────────
+                // Photo strip
                 if let path = container.photo, let img = UIImage(contentsOfFile: path) {
                     Button { showFullScreenPhoto = true } label: {
                         Image(uiImage: img)
                             .resizable()
                             .scaledToFill()
                             .frame(maxWidth: .infinity)
-                            .frame(height: 88)
+                            .frame(height: 135)
                             .clipped()
                     }
                     .buttonStyle(.plain)
@@ -161,13 +157,13 @@ struct ContainerDetailView: View {
                         ZStack {
                             Color(.systemGray6)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 88)
+                                .frame(height: 135)
                             VStack(spacing: 6) {
                                 Image(systemName: "camera")
                                     .font(.title2)
                                     .foregroundStyle(.secondary)
                                 Text("Tap to add photo")
-                                    .font(.caption)
+                                    .font(.system(size: 13))
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -175,38 +171,60 @@ struct ContainerDetailView: View {
                     .buttonStyle(.plain)
                 }
 
-                // ── Details ───────────────────────────────────────────
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(container.name)
-                        .font(.system(size: 13, weight: .bold))
+                // Details
+                VStack(alignment: .leading, spacing: 8) {
 
-                    Text(container.type.rawValue)
-                        .font(.system(size: 11, weight: .semibold))
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 3)
-                        .background(stashBlueTint)
-                        .foregroundStyle(stashBlue)
-                        .clipShape(Capsule())
+                    // Row 1: name + type pill
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(container.name)
+                            .font(.system(size: 15, weight: .bold))
+                        Spacer()
+                        Text(container.type.rawValue)
+                            .font(.system(size: 13))
+                            .foregroundStyle(stashBlue)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 3)
+                            .overlay(Capsule().stroke(stashBlue, lineWidth: 1))
+                    }
 
-                    Text(locationPath)
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-
+                    // Row 2: notes (hidden if empty)
                     if !container.notes.isEmpty {
                         Text(container.notes)
-                            .font(.system(size: 10))
+                            .font(.system(size: 13))
                             .foregroundStyle(.secondary)
                     }
 
-                    Text(Self.dateFmt.string(from: container.updatedAt))
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
+                    // Row 3: location path
+                    HStack(spacing: 5) {
+                        Image(systemName: "mappin.circle")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                        Text(locationPath)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // Row 4: updated date
+                    HStack(spacing: 5) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                        Text(Self.dateFmt.string(from: container.updatedAt))
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 16)
                 .padding(.vertical, 12)
+
+                // Subtle separator before items
+                Rectangle()
+                    .fill(Color(.separator))
+                    .frame(maxWidth: .infinity, minHeight: 0.33, maxHeight: 0.33)
             }
         }
         .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
     }
 
     // MARK: - Items section
@@ -217,9 +235,11 @@ struct ContainerDetailView: View {
             ForEach(sortedItems) { item in
                 HStack {
                     Text(item.name)
+                        .font(.system(size: 17))
                     Spacer()
                     if let qty = item.quantity, qty > 0 {
                         Text("×\(qty)")
+                            .font(.system(size: 17))
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                     }
@@ -227,23 +247,27 @@ struct ContainerDetailView: View {
             }
             .onDelete { deleteItems(at: $0) }
 
-            // Inline add row
+            // Inline add fields
             if isAddingItem {
                 HStack(spacing: 12) {
                     TextField("Item name", text: $newItemName)
-                        .focused($addItemFocused)
+                        .font(.system(size: 17))
+                        .focused($itemFocus, equals: .name)
                         .onSubmit { commitItem() }
                     Divider().frame(height: 18)
                     TextField("Qty", text: $newItemQty)
+                        .font(.system(size: 17))
                         .keyboardType(.numberPad)
                         .frame(width: 48)
                         .multilineTextAlignment(.trailing)
+                        .focused($itemFocus, equals: .qty)
                 }
                 HStack {
                     Button("Cancel") {
                         isAddingItem = false
                         newItemName  = ""
                         newItemQty   = ""
+                        itemFocus    = nil
                     }
                     .buttonStyle(.borderless)
                     .foregroundStyle(.secondary)
@@ -253,39 +277,24 @@ struct ContainerDetailView: View {
                         .bold()
                         .disabled(newItemName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
-                .font(.subheadline)
+                .font(.system(size: 15))
             }
 
-            // "Add item" bordered bar
+            // "Add item" action row (same style as Move / Print rows)
             if !isAddingItem {
                 Button {
-                    isAddingItem   = true
-                    addItemFocused = true
+                    isAddingItem = true
+                    itemFocus    = .name
                 } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text("Add item")
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundStyle(stashBlue)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 9)
-                    .padding(.horizontal, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(stashBlue.opacity(0.4), lineWidth: 1)
-                    )
+                    Label("Add item", systemImage: "plus.circle")
+                        .font(.system(size: 17))
+                        .foregroundStyle(.primary)
                 }
-                .buttonStyle(.plain)
-                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                .listRowBackground(Color(.systemGroupedBackground))
-                .listRowSeparator(.hidden)
             }
         } header: {
             Text("ITEMS")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
         }
     }
 
@@ -294,28 +303,25 @@ struct ContainerDetailView: View {
     @ViewBuilder
     private var actionsSection: some View {
         Section {
-            Button {
-                showMoveContainer = true
-            } label: {
+            Button { showMoveContainer = true } label: {
                 Label("Move Container", systemImage: "arrow.up.right.square")
-                    .foregroundStyle(stashBlue)
+                    .font(.system(size: 17))
+                    .foregroundStyle(.primary)
             }
-            Button {
-                showPrintPreview = true
-            } label: {
+            Button { showPrintPreview = true } label: {
                 Label("Print Label", systemImage: "printer")
-                    .foregroundStyle(stashBlue)
+                    .font(.system(size: 17))
+                    .foregroundStyle(.primary)
             }
-            Button {
-                showDeleteConfirm = true
-            } label: {
+            Button { showDeleteConfirm = true } label: {
                 Label("Delete Container", systemImage: "trash")
+                    .font(.system(size: 17))
                     .foregroundStyle(stashDeleteRed)
             }
         } header: {
             Text("ACTIONS")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
         }
     }
 
@@ -324,13 +330,12 @@ struct ContainerDetailView: View {
     private func commitItem() {
         let name = newItemName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
-        let qty = Int(newItemQty)
-        let item = Item(name: name, quantity: qty)
+        let item = Item(name: name, quantity: Int(newItemQty))
         container.items.append(item)
         container.updatedAt = Date()
-        newItemName    = ""
-        newItemQty     = ""
-        addItemFocused = true   // keep keyboard open for next item
+        newItemName = ""
+        newItemQty  = ""
+        itemFocus   = .name   // keep keyboard open for next item
     }
 
     private func deleteItems(at offsets: IndexSet) {
@@ -339,7 +344,7 @@ struct ContainerDetailView: View {
         container.updatedAt = Date()
     }
 
-    // MARK: - Photo actions
+    // MARK: - Photo
 
     private func savePhoto(_ image: UIImage) {
         if let existingPath = container.photo {
@@ -377,9 +382,7 @@ private struct FullScreenPhotoView: View {
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            Button {
-                dismiss()
-            } label: {
+            Button { dismiss() } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title)
                     .foregroundStyle(.white)

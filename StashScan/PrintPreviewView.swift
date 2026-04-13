@@ -138,7 +138,7 @@ struct PrintPreviewView: View {
 
             case .ready:
                 HStack(spacing: 10) {
-                    Image(systemName: "printer.fill")
+                    Image(systemName: "printer")
                         .foregroundStyle(.green)
                     Text("Phomemo Q02E – Ready")
                     Spacer()

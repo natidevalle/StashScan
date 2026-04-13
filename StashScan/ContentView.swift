@@ -16,16 +16,15 @@ let stashBlueTint  = Color(red: 230/255, green: 241/255, blue: 251/255)
 let stashDeleteRed = Color(red: 226/255, green: 75/255,  blue:  74/255)
 
 // MARK: - Shared list-row icon
+// Outline-only, primary label colour, no background.
 
 struct ListIcon: View {
     let symbol: String
     var body: some View {
         Image(systemName: symbol)
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(stashBlue)
-            .frame(width: 26, height: 26)
-            .background(stashBlueTint)
-            .clipShape(RoundedRectangle(cornerRadius: 7))
+            .font(.system(size: 17))
+            .foregroundStyle(.primary)
+            .frame(width: 28, height: 28)
     }
 }
 
@@ -38,13 +37,28 @@ enum AppRoute: Hashable {
 // MARK: - Root ContentView (TabView)
 
 struct ContentView: View {
+    enum AppTab: Hashable { case home, scan }
+
     @State private var selectedTab: AppTab = .home
     @State private var navigationPath = NavigationPath()
 
-    enum AppTab { case home, scan }
+    /// Returns nil when inside the nav stack so the tab bar shows no selected state.
+    private var tabSelection: Binding<AppTab?> {
+        Binding<AppTab?>(
+            get: { navigationPath.isEmpty ? selectedTab : nil },
+            set: { newTab in
+                guard let newTab else { return }
+                selectedTab = newTab
+                if newTab == .home {
+                    // Tapping Home from a child screen pops to root.
+                    navigationPath = NavigationPath()
+                }
+            }
+        )
+    }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: tabSelection) {
 
             // ── Home tab ───────────────────────────────────────────────
             NavigationStack(path: $navigationPath) {
@@ -64,8 +78,8 @@ struct ContentView: View {
                         }
                     }
             }
-            .tabItem { Label("Home", systemImage: "square.grid.2x2") }
-            .tag(AppTab.home)
+            .tabItem { Label("Home", systemImage: "house") }
+            .tag(AppTab.home as AppTab?)
 
             // ── Scan tab ───────────────────────────────────────────────
             ScannerView(onFound: { container in
@@ -75,7 +89,7 @@ struct ContentView: View {
                 }
             }, cancellable: false)
             .tabItem { Label("Scan", systemImage: "qrcode.viewfinder") }
-            .tag(AppTab.scan)
+            .tag(AppTab.scan as AppTab?)
         }
     }
 }
@@ -105,11 +119,12 @@ private struct SearchResult: Identifiable {
 
 private struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.isSearching) private var isSearching
     @Query(sort: \Location.name) private var locations: [Location]
     @Query(sort: \Container.name) private var allContainers: [Container]
 
-    @State private var searchText       = ""
-    @State private var showAddLocation  = false
+    @State private var searchText        = ""
+    @State private var showAddLocation   = false
     @State private var locationToDelete: Location? = nil
     @State private var showDeleteConfirm = false
 
@@ -156,13 +171,31 @@ private struct HomeView: View {
 
     var body: some View {
         List {
-            if trimmedQuery.isEmpty {
+            if isSearching {
+                // ── Search mode ───────────────────────────────────────
+                // When search is active, location list disappears entirely.
+                if !searchResults.isEmpty {
+                    Section {
+                        ForEach(searchResults) { result in
+                            NavigationLink(value: result.containerForNav) {
+                                searchResultRow(result)
+                            }
+                        }
+                    } header: {
+                        Text("\(searchResults.count) result\(searchResults.count == 1 ? "" : "s")")
+                            .font(.system(size: 13))
+                            .textCase(nil)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else {
                 // ── Normal hierarchy ──────────────────────────────────
                 ForEach(locations) { location in
                     NavigationLink(value: location) {
                         HStack(spacing: 12) {
-                            ListIcon(symbol: "mappin.circle.fill")
+                            ListIcon(symbol: "mappin.circle")
                             Text(location.name)
+                                .font(.system(size: 17))
                         }
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -172,22 +205,6 @@ private struct HomeView: View {
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
-                    }
-                }
-            } else {
-                // ── Search results ────────────────────────────────────
-                if !searchResults.isEmpty {
-                    Section {
-                        ForEach(searchResults) { result in
-                            NavigationLink(value: result.containerForNav) {
-                                searchResultRow(result)
-                            }
-                        }
-                    } header: {
-                        Text("\(searchResults.count) item\(searchResults.count == 1 ? "" : "s") found")
-                            .font(.system(size: 12))
-                            .textCase(nil)
-                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -233,35 +250,49 @@ private struct HomeView: View {
 
     @ViewBuilder
     private func searchResultRow(_ result: SearchResult) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            switch result.kind {
-            case .item(let item, let container):
-                HStack(spacing: 0) {
-                    Text(item.name)
-                        .font(.system(size: 13, weight: .bold))
-                    if let qty = item.quantity, qty > 1 {
-                        Text(" ×\(qty)")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.secondary)
-                    }
+        HStack(spacing: 12) {
+            // Type icon — row-height aligned, outline only
+            Group {
+                switch result.kind {
+                case .item:      Image(systemName: "tag")
+                case .container: Image(systemName: "shippingbox")
                 }
-                Text(
-                    "\(container.name) · " +
-                    "\(container.zone?.location?.name ?? "?") › " +
-                    "\(container.zone?.name ?? "?")"
-                )
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
+            }
+            .font(.system(size: 17))
+            .foregroundStyle(.primary)
+            .frame(width: 28, height: 28)
 
-            case .container(let container):
-                Text(container.name)
-                    .font(.system(size: 13, weight: .bold))
-                Text(
-                    "\(container.zone?.location?.name ?? "?") › " +
-                    "\(container.zone?.name ?? "?")"
-                )
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
+            // Text column
+            VStack(alignment: .leading, spacing: 3) {
+                switch result.kind {
+                case .item(let item, let container):
+                    HStack(spacing: 0) {
+                        Text(item.name)
+                            .font(.system(size: 13, weight: .bold))
+                        if let qty = item.quantity, qty > 1 {
+                            Text(" ×\(qty)")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Text(
+                        "\(container.name) · " +
+                        "\(container.zone?.location?.name ?? "?") > " +
+                        "\(container.zone?.name ?? "?")"
+                    )
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+
+                case .container(let container):
+                    Text(container.name)
+                        .font(.system(size: 13, weight: .bold))
+                    Text(
+                        "\(container.zone?.location?.name ?? "?") > " +
+                        "\(container.zone?.name ?? "?")"
+                    )
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(.vertical, 2)
@@ -271,13 +302,13 @@ private struct HomeView: View {
 
     @ViewBuilder
     private var emptyStateOverlay: some View {
-        if trimmedQuery.isEmpty && locations.isEmpty {
+        if !isSearching && locations.isEmpty {
             ContentUnavailableView(
                 "No Locations",
                 systemImage: "mappin.slash",
                 description: Text("Tap + to add your first location.")
             )
-        } else if !trimmedQuery.isEmpty && searchResults.isEmpty {
+        } else if isSearching && !trimmedQuery.isEmpty && searchResults.isEmpty {
             ContentUnavailableView.search(text: searchText)
         }
     }

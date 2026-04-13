@@ -90,7 +90,7 @@ enum LabelRenderer {
             let locName  = container.zone?.location?.name ?? "?"
             let zoneName = container.zone?.name ?? "?"
             let pathHeight = ceil(pathFont.lineHeight) * 2   // ≈ 46 px
-            ("\(locName) › \(zoneName)" as NSString).draw(
+            ("\(locName) > \(zoneName)" as NSString).draw(
                 in: CGRect(x: textX, y: cursorY, width: textWidth, height: pathHeight),
                 withAttributes: pathAttrs
             )

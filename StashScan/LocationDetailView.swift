@@ -33,7 +33,7 @@ struct LocationDetailView: View {
             ForEach(zones) { zone in
                 NavigationLink(value: zone) {
                     HStack(spacing: 12) {
-                        ListIcon(symbol: "square.split.2x1.fill")
+                        ListIcon(symbol: "square.dashed")
                         Text(zone.name)
                     }
                 }
