@@ -37,28 +37,14 @@ enum AppRoute: Hashable {
 // MARK: - Root ContentView (TabView)
 
 struct ContentView: View {
-    enum AppTab: Hashable { case home, scan }
+    // .inNav has no matching tab item tag → no tab highlighted when navigating deep.
+    enum AppTab: Hashable { case home, scan, inNav }
 
     @State private var selectedTab: AppTab = .home
     @State private var navigationPath = NavigationPath()
 
-    /// Returns nil when inside the nav stack so the tab bar shows no selected state.
-    private var tabSelection: Binding<AppTab?> {
-        Binding<AppTab?>(
-            get: { navigationPath.isEmpty ? selectedTab : nil },
-            set: { newTab in
-                guard let newTab else { return }
-                selectedTab = newTab
-                if newTab == .home {
-                    // Tapping Home from a child screen pops to root.
-                    navigationPath = NavigationPath()
-                }
-            }
-        )
-    }
-
     var body: some View {
-        TabView(selection: tabSelection) {
+        TabView(selection: $selectedTab) {
 
             // ── Home tab ───────────────────────────────────────────────
             NavigationStack(path: $navigationPath) {
@@ -79,7 +65,7 @@ struct ContentView: View {
                     }
             }
             .tabItem { Label("Home", systemImage: "house") }
-            .tag(AppTab.home as AppTab?)
+            .tag(AppTab.home)
 
             // ── Scan tab ───────────────────────────────────────────────
             ScannerView(onFound: { container in
@@ -89,7 +75,18 @@ struct ContentView: View {
                 }
             }, cancellable: false)
             .tabItem { Label("Scan", systemImage: "qrcode.viewfinder") }
-            .tag(AppTab.scan as AppTab?)
+            .tag(AppTab.scan)
+        }
+        // Deselect Home tab when navigating into the stack; reselect when back at root.
+        .onChange(of: navigationPath.count) { _, count in
+            if count > 0, selectedTab == .home  { selectedTab = .inNav }
+            else if count == 0, selectedTab == .inNav { selectedTab = .home }
+        }
+        // Tapping Home tab from a child screen pops to root.
+        .onChange(of: selectedTab) { _, tab in
+            if tab == .home, !navigationPath.isEmpty {
+                navigationPath = NavigationPath()
+            }
         }
     }
 }
@@ -119,7 +116,6 @@ private struct SearchResult: Identifiable {
 
 private struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.isSearching) private var isSearching
     @Query(sort: \Location.name) private var locations: [Location]
     @Query(sort: \Container.name) private var allContainers: [Container]
 
@@ -138,7 +134,6 @@ private struct HomeView: View {
         var results: [SearchResult] = []
 
         for container in allContainers {
-            // One row per matching item
             for item in container.items {
                 let itemLower = item.name.lowercased()
                 guard itemLower.contains(lower) else { continue }
@@ -147,7 +142,6 @@ private struct HomeView: View {
                     isExact: itemLower == lower
                 ))
             }
-            // Container name / notes match
             let cLower = container.name.lowercased()
             let nLower = container.notes.lowercased()
             if cLower.contains(lower) || nLower.contains(lower) {
@@ -158,7 +152,6 @@ private struct HomeView: View {
             }
         }
 
-        // Item rows before container rows; exact before partial; alpha within tier
         return results.sorted { a, b in
             let aItem: Bool; if case .item = a.kind { aItem = true } else { aItem = false }
             let bItem: Bool; if case .item = b.kind { bItem = true } else { bItem = false }
@@ -170,10 +163,85 @@ private struct HomeView: View {
     }
 
     var body: some View {
+        // SearchListView is a child so @Environment(\.isSearching) works correctly —
+        // reading isSearching in the same view as .searchable(displayMode:.always)
+        // always returns true.
+        SearchListView(
+            searchText: $searchText,
+            locations: locations,
+            searchResults: searchResults,
+            trimmedQuery: trimmedQuery,
+            locationToDelete: $locationToDelete,
+            showDeleteConfirm: $showDeleteConfirm
+        )
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "Search items, containers, notes…"
+        )
+        .navigationTitle("Locations")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showAddLocation = true } label: {
+                    Image(systemName: "plus")
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(value: AppRoute.settings) {
+                    Image(systemName: "gear")
+                }
+            }
+        }
+        .sheet(isPresented: $showAddLocation) {
+            AddEditLocationView()
+        }
+        .confirmationDialog(
+            "Delete \"\(locationToDelete?.name ?? "")\"?",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let loc = locationToDelete { loc.delete(from: modelContext) }
+                locationToDelete = nil
+            }
+            Button("Cancel", role: .cancel) { locationToDelete = nil }
+        } message: {
+            if let loc = locationToDelete { Text(deleteMessage(for: loc)) }
+        }
+    }
+
+    private func deleteMessage(for location: Location) -> String {
+        let zoneCount = location.zones.count
+        let containerCount = location.zones.reduce(0) { $0 + $1.containers.count }
+        if containerCount > 0 {
+            return "This will delete \(zoneCount) zone\(zoneCount == 1 ? "" : "s") and " +
+                   "\(containerCount) container\(containerCount == 1 ? "" : "s") and all their contents."
+        } else if zoneCount > 0 {
+            return "This will delete \(zoneCount) zone\(zoneCount == 1 ? "" : "s")."
+        } else {
+            return "This location is empty."
+        }
+    }
+}
+
+// MARK: - Search list view
+// Child of HomeView so that @Environment(\.isSearching) returns the correct value.
+
+private struct SearchListView: View {
+    @Environment(\.isSearching) private var isSearching
+    @Environment(\.dismissSearch) private var dismissSearch
+
+    @Binding var searchText: String
+    let locations: [Location]
+    let searchResults: [SearchResult]
+    let trimmedQuery: String
+    @Binding var locationToDelete: Location?
+    @Binding var showDeleteConfirm: Bool
+
+    var body: some View {
         List {
             if isSearching {
-                // ── Search mode ───────────────────────────────────────
-                // When search is active, location list disappears entirely.
+                // ── Search mode: hide location list, show results only ─
                 if !searchResults.isEmpty {
                     Section {
                         ForEach(searchResults) { result in
@@ -209,41 +277,19 @@ private struct HomeView: View {
                 }
             }
         }
-        .navigationTitle("Locations")
-        .searchable(
-            text: $searchText,
-            placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Search items, containers, notes…"
-        )
-        .overlay { emptyStateOverlay }
+        // Back arrow in leading position when search is active (replaces search icon).
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showAddLocation = true } label: {
-                    Image(systemName: "plus")
+            if isSearching {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        dismissSearch()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                    }
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(value: AppRoute.settings) {
-                    Image(systemName: "gear")
-                }
-            }
         }
-        .sheet(isPresented: $showAddLocation) {
-            AddEditLocationView()
-        }
-        .confirmationDialog(
-            "Delete \"\(locationToDelete?.name ?? "")\"?",
-            isPresented: $showDeleteConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                if let loc = locationToDelete { loc.delete(from: modelContext) }
-                locationToDelete = nil
-            }
-            Button("Cancel", role: .cancel) { locationToDelete = nil }
-        } message: {
-            if let loc = locationToDelete { Text(deleteMessage(for: loc)) }
-        }
+        .overlay { emptyStateOverlay }
     }
 
     // MARK: Search row
@@ -251,7 +297,6 @@ private struct HomeView: View {
     @ViewBuilder
     private func searchResultRow(_ result: SearchResult) -> some View {
         HStack(spacing: 12) {
-            // Type icon — row-height aligned, outline only
             Group {
                 switch result.kind {
                 case .item:      Image(systemName: "tag")
@@ -262,7 +307,6 @@ private struct HomeView: View {
             .foregroundStyle(.primary)
             .frame(width: 28, height: 28)
 
-            // Text column
             VStack(alignment: .leading, spacing: 3) {
                 switch result.kind {
                 case .item(let item, let container):
@@ -310,21 +354,6 @@ private struct HomeView: View {
             )
         } else if isSearching && !trimmedQuery.isEmpty && searchResults.isEmpty {
             ContentUnavailableView.search(text: searchText)
-        }
-    }
-
-    // MARK: Helpers
-
-    private func deleteMessage(for location: Location) -> String {
-        let zoneCount = location.zones.count
-        let containerCount = location.zones.reduce(0) { $0 + $1.containers.count }
-        if containerCount > 0 {
-            return "This will delete \(zoneCount) zone\(zoneCount == 1 ? "" : "s") and " +
-                   "\(containerCount) container\(containerCount == 1 ? "" : "s") and all their contents."
-        } else if zoneCount > 0 {
-            return "This will delete \(zoneCount) zone\(zoneCount == 1 ? "" : "s")."
-        } else {
-            return "This location is empty."
         }
     }
 }
