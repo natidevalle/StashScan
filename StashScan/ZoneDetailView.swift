@@ -2,7 +2,7 @@
 //  ZoneDetailView.swift
 //  StashScan
 //
-//  Shows the containers inside a zone, with add/delete actions.
+//  Shows the containers inside a zone.
 //
 
 import SwiftUI
@@ -10,28 +10,18 @@ import SwiftData
 
 struct ZoneDetailView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
 
     let zone: Zone
 
-    // @Query filtered by zone.id drives the list reactively — inserts in the
-    // add-container sheet update this immediately without any navigation required.
     @Query private var containers: [Container]
 
     @State private var showAddContainer = false
     @State private var containerToDelete: Container? = nil
     @State private var showContainerDeleteConfirm = false
-    @State private var showEditZone = false
-    @State private var showDeleteZone = false
 
     init(zone: Zone) {
         self.zone = zone
         let id = zone.id
-        // Filter by zoneId (a plain stored UUID on Container) rather than zone?.id.
-        // #Predicate cannot reliably translate optional relationship chains (?.id) into
-        // a valid NSPredicate at runtime — the query silently returns nothing and
-        // the NavigationLink destination breaks. zoneId is always kept in sync with
-        // zone.id, so the result is identical but the predicate compiles cleanly.
         _containers = Query(
             filter: #Predicate<Container> { $0.zoneId == id },
             sort: \Container.name
@@ -43,14 +33,8 @@ struct ZoneDetailView: View {
             ForEach(containers) { container in
                 NavigationLink(value: container) {
                     HStack(spacing: 12) {
-                        Image(systemName: iconName(for: container.type))
-                            .foregroundStyle(.secondary)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(container.name)
-                            Text(container.type.rawValue)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                        ListIcon(symbol: "shippingbox.fill")
+                        Text(container.name)
                     }
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -82,31 +66,9 @@ struct ZoneDetailView: View {
                     Image(systemName: "plus")
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button {
-                        showEditZone = true
-                    } label: {
-                        Label("Edit Zone Name", systemImage: "pencil")
-                    }
-                    Divider()
-                    Button(role: .destructive) {
-                        showDeleteZone = true
-                    } label: {
-                        Label("Delete Zone", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-            }
         }
         .sheet(isPresented: $showAddContainer) {
             AddEditContainerView(zone: zone)
-        }
-        .sheet(isPresented: $showEditZone) {
-            if let location = zone.location {
-                AddEditZoneView(location: location, zone: zone)
-            }
         }
         .confirmationDialog(
             "Delete \"\(containerToDelete?.name ?? "")\"?",
@@ -131,35 +93,6 @@ struct ZoneDetailView: View {
                     Text("This container is empty.")
                 }
             }
-        }
-        .confirmationDialog(
-            "Delete \"\(zone.name)\"?",
-            isPresented: $showDeleteZone,
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                zone.delete(from: modelContext)
-                dismiss()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            let containerCount = containers.count
-            if containerCount > 0 {
-                Text("This will delete \(containerCount) container\(containerCount == 1 ? "" : "s") and all their contents.")
-            } else {
-                Text("This zone is empty.")
-            }
-        }
-    }
-
-    private func iconName(for type: ContainerType) -> String {
-        switch type {
-        case .box:    return "shippingbox"
-        case .bag:    return "bag"
-        case .bin:    return "trash"
-        case .drawer: return "square.stack"
-        case .shelf:  return "books.vertical"
-        case .other:  return "archivebox"
         }
     }
 }

@@ -18,6 +18,8 @@ struct ScannerView: View {
 
     /// Called when a container is successfully resolved from a scanned QR code.
     let onFound: (Container) -> Void
+    /// When false the Cancel button is hidden (use when embedded in a tab rather than a sheet).
+    var cancellable: Bool = true
 
     @State private var permissionStatus = AVCaptureDevice.authorizationStatus(for: .video)
     @State private var errorMessage: String? = nil
@@ -45,7 +47,7 @@ struct ScannerView: View {
                     .foregroundStyle(.white)
             }
         }
-        .overlay(alignment: .topLeading) { cancelButton }
+        .overlay(alignment: .topLeading) { if cancellable { cancelButton } }
         .task {
             if permissionStatus == .notDetermined {
                 let granted = await AVCaptureDevice.requestAccess(for: .video)

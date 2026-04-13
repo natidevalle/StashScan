@@ -2,12 +2,14 @@
 //  ContainerDetailView.swift
 //  StashScan
 //
-//  Full detail screen for a container: path, type, photo, items, actions.
+//  Full detail screen for a container: hero card, items, actions.
 //
 
 import SwiftUI
 import SwiftData
 import PhotosUI
+
+// MARK: - ContainerDetailView
 
 struct ContainerDetailView: View {
     @Environment(\.modelContext) private var modelContext
@@ -16,203 +18,64 @@ struct ContainerDetailView: View {
     let container: Container
 
     // Sheet / alert presentation
-    @State private var showEditContainer = false
-    @State private var showMoveContainer = false
-    @State private var showPrintPreview  = false
-    @State private var showDeleteConfirm = false
+    @State private var showEditContainer  = false
+    @State private var showMoveContainer  = false
+    @State private var showPrintPreview   = false
+    @State private var showDeleteConfirm  = false
     @State private var showFullScreenPhoto = false
 
-    // Photo picking
+    // Photo picking (for the placeholder tap on hero card)
     @State private var showPhotoActionSheet = false
-    @State private var showPhotoLibrary = false
-    @State private var showCamera = false
+    @State private var showPhotoLibrary     = false
+    @State private var showCamera           = false
     @State private var photoItem: PhotosPickerItem? = nil
 
     // Inline item add
-    @State private var isAddingItem = false
-    @State private var newItemName = ""
-    @State private var newItemQuantity = ""
+    @State private var isAddingItem   = false
+    @State private var newItemName    = ""
+    @State private var newItemQty     = ""
     @FocusState private var addItemFocused: Bool
 
+    // MARK: Computed
+
     private var sortedItems: [Item] {
-        container.items.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        container.items.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
     }
 
     private var locationPath: String {
-        let locationName = container.zone?.location?.name ?? "Unknown Location"
-        let zoneName = container.zone?.name ?? "Unknown Zone"
-        return "\(locationName)  ›  \(zoneName)"
+        let loc  = container.zone?.location?.name ?? "Unknown Location"
+        let zone = container.zone?.name ?? "Unknown Zone"
+        return "\(loc) › \(zone)"
     }
+
+    private static let dateFmt: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d MMM yyyy, HH:mm"
+        return f
+    }()
+
+    // MARK: Body
 
     var body: some View {
         List {
-            // ── Location path ──────────────────────────────────────────
-            Section {
-                HStack(spacing: 6) {
-                    Image(systemName: "mappin.circle.fill")
-                        .foregroundStyle(.secondary)
-                    Text(locationPath)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            // ── Details ────────────────────────────────────────────────
-            Section("Details") {
-                HStack {
-                    Text("Type")
-                    Spacer()
-                    Text(container.type.rawValue)
-                        .font(.footnote.weight(.semibold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(.tint.opacity(0.12))
-                        .foregroundStyle(.tint)
-                        .clipShape(Capsule())
-                }
-                if !container.notes.isEmpty {
-                    Text(container.notes)
-                        .foregroundStyle(.secondary)
-                }
-                LabeledContent("Updated") {
-                    Text(container.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            // ── QR Code ────────────────────────────────────────────────
-            Section("QR Code") {
-                HStack {
-                    Spacer()
-                    QRCodeView(uuid: container.qrCode)
-                        .frame(width: 180, height: 180)
-                    Spacer()
-                }
-                .padding(.vertical, 8)
-            }
-
-            // ── Photo ──────────────────────────────────────────────────
-            Section("Photo") {
-                if let photoPath = container.photo,
-                   let image = UIImage(contentsOfFile: photoPath) {
-                    Button {
-                        showFullScreenPhoto = true
-                    } label: {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 220)
-                            .clipped()
-                    }
-                    .buttonStyle(.plain)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-
-                    Button("Change Photo") {
-                        showPhotoActionSheet = true
-                    }
-                    Button("Remove Photo", role: .destructive) {
-                        removePhoto()
-                    }
-                } else {
-                    Button {
-                        showPhotoActionSheet = true
-                    } label: {
-                        Label("Add Photo", systemImage: "photo.badge.plus")
-                    }
-                }
-            }
-
-            // ── Items ──────────────────────────────────────────────────
-            Section {
-                ForEach(sortedItems) { item in
-                    HStack {
-                        Text(item.name)
-                        Spacer()
-                        if let qty = item.quantity {
-                            Text("×\(qty)")
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                    }
-                }
-                .onDelete { offsets in
-                    deleteItems(at: offsets)
-                }
-
-                if isAddingItem {
-                    // Row 1: name + optional qty fields
-                    HStack(spacing: 12) {
-                        TextField("Item name", text: $newItemName)
-                            .focused($addItemFocused)
-                            .onSubmit { commitItem() }
-                        Divider().frame(height: 18)
-                        TextField("Qty", text: $newItemQuantity)
-                            .keyboardType(.numberPad)
-                            .frame(width: 48)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    // Row 2: cancel + add buttons
-                    // .buttonStyle(.borderless) is required — without it a List row with
-                    // multiple Buttons lets the row absorb the tap before either button sees it.
-                    HStack {
-                        Button("Cancel") {
-                            isAddingItem = false
-                            newItemName = ""
-                            newItemQuantity = ""
-                        }
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Add") { commitItem() }
-                            .buttonStyle(.borderless)
-                            .bold()
-                            .disabled(newItemName.trimmingCharacters(in: .whitespaces).isEmpty)
-                    }
-                    .font(.subheadline)
-                }
-
-                if !isAddingItem {
-                    Button {
-                        isAddingItem = true
-                    } label: {
-                        Label("Add Item", systemImage: "plus.circle.fill")
-                    }
-                }
-            } header: {
-                let count = container.items.count
-                Text(count == 0 ? "Items" : "Items (\(count))")
-            }
-
-            // ── Actions ────────────────────────────────────────────────
-            Section {
-                Button {
-                    showMoveContainer = true
-                } label: {
-                    Label("Move Container", systemImage: "arrow.up.right.square")
-                }
-                Button {
-                    showPrintPreview = true
-                } label: {
-                    Label("Print Label", systemImage: "printer")
-                }
-                Button(role: .destructive) {
-                    showDeleteConfirm = true
-                } label: {
-                    Label("Delete Container", systemImage: "trash")
-                }
-            }
+            heroCard
+            itemsSection
+            actionsSection
         }
-        .navigationTitle(container.name)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Edit") { showEditContainer = true }
+                Button { showEditContainer = true } label: {
+                    Image(systemName: "square.and.pencil")
+                }
             }
         }
-        // Photo action sheet
-        .confirmationDialog("Photo", isPresented: $showPhotoActionSheet) {
+        .scrollDismissesKeyboard(.interactively)
+        // Photo action sheet (from placeholder tap)
+        .confirmationDialog("Add Photo", isPresented: $showPhotoActionSheet) {
             Button("Choose from Library") { showPhotoLibrary = true }
             if UIImagePickerController.isSourceTypeAvailable(.camera) {
                 Button("Take Photo") { showCamera = true }
@@ -269,9 +132,190 @@ struct ContainerDetailView: View {
                 Text("This container is empty.")
             }
         }
-        // Auto-focus when add item form appears
+        // Auto-focus when add row appears
         .onChange(of: isAddingItem) { _, newValue in
             if newValue { addItemFocused = true }
+        }
+    }
+
+    // MARK: - Hero card
+
+    @ViewBuilder
+    private var heroCard: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 0) {
+
+                // ── Photo strip ───────────────────────────────────────
+                if let path = container.photo, let img = UIImage(contentsOfFile: path) {
+                    Button { showFullScreenPhoto = true } label: {
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 88)
+                            .clipped()
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Button { showPhotoActionSheet = true } label: {
+                        ZStack {
+                            Color(.systemGray6)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 88)
+                            VStack(spacing: 6) {
+                                Image(systemName: "camera")
+                                    .font(.title2)
+                                    .foregroundStyle(.secondary)
+                                Text("Tap to add photo")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // ── Details ───────────────────────────────────────────
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(container.name)
+                        .font(.system(size: 13, weight: .bold))
+
+                    Text(container.type.rawValue)
+                        .font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
+                        .background(stashBlueTint)
+                        .foregroundStyle(stashBlue)
+                        .clipShape(Capsule())
+
+                    Text(locationPath)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+
+                    if !container.notes.isEmpty {
+                        Text(container.notes)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text(Self.dateFmt.string(from: container.updatedAt))
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+            }
+        }
+        .listRowInsets(EdgeInsets())
+    }
+
+    // MARK: - Items section
+
+    @ViewBuilder
+    private var itemsSection: some View {
+        Section {
+            ForEach(sortedItems) { item in
+                HStack {
+                    Text(item.name)
+                    Spacer()
+                    if let qty = item.quantity, qty > 0 {
+                        Text("×\(qty)")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                }
+            }
+            .onDelete { deleteItems(at: $0) }
+
+            // Inline add row
+            if isAddingItem {
+                HStack(spacing: 12) {
+                    TextField("Item name", text: $newItemName)
+                        .focused($addItemFocused)
+                        .onSubmit { commitItem() }
+                    Divider().frame(height: 18)
+                    TextField("Qty", text: $newItemQty)
+                        .keyboardType(.numberPad)
+                        .frame(width: 48)
+                        .multilineTextAlignment(.trailing)
+                }
+                HStack {
+                    Button("Cancel") {
+                        isAddingItem = false
+                        newItemName  = ""
+                        newItemQty   = ""
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Add") { commitItem() }
+                        .buttonStyle(.borderless)
+                        .bold()
+                        .disabled(newItemName.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                .font(.subheadline)
+            }
+
+            // "Add item" bordered bar
+            if !isAddingItem {
+                Button {
+                    isAddingItem   = true
+                    addItemFocused = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Add item")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundStyle(stashBlue)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 9)
+                    .padding(.horizontal, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(stashBlue.opacity(0.4), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                .listRowBackground(Color(.systemGroupedBackground))
+                .listRowSeparator(.hidden)
+            }
+        } header: {
+            Text("ITEMS")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Actions section
+
+    @ViewBuilder
+    private var actionsSection: some View {
+        Section {
+            Button {
+                showMoveContainer = true
+            } label: {
+                Label("Move Container", systemImage: "arrow.up.right.square")
+                    .foregroundStyle(stashBlue)
+            }
+            Button {
+                showPrintPreview = true
+            } label: {
+                Label("Print Label", systemImage: "printer")
+                    .foregroundStyle(stashBlue)
+            }
+            Button {
+                showDeleteConfirm = true
+            } label: {
+                Label("Delete Container", systemImage: "trash")
+                    .foregroundStyle(stashDeleteRed)
+            }
+        } header: {
+            Text("ACTIONS")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -280,20 +324,18 @@ struct ContainerDetailView: View {
     private func commitItem() {
         let name = newItemName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
-        let qty = Int(newItemQuantity)
+        let qty = Int(newItemQty)
         let item = Item(name: name, quantity: qty)
-        container.items.append(item)   // auto-inserts into context and wires the inverse
+        container.items.append(item)
         container.updatedAt = Date()
-        newItemName = ""
-        newItemQuantity = ""
-        isAddingItem = false
+        newItemName    = ""
+        newItemQty     = ""
+        addItemFocused = true   // keep keyboard open for next item
     }
 
     private func deleteItems(at offsets: IndexSet) {
         let items = offsets.map { sortedItems[$0] }
-        for item in items {
-            modelContext.delete(item)
-        }
+        for item in items { modelContext.delete(item) }
         container.updatedAt = Date()
     }
 
@@ -308,15 +350,7 @@ struct ContainerDetailView: View {
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(filename)
         try? data.write(to: url)
-        container.photo = url.path
-        container.updatedAt = Date()
-    }
-
-    private func removePhoto() {
-        if let path = container.photo {
-            try? FileManager.default.removeItem(atPath: path)
-        }
-        container.photo = nil
+        container.photo     = url.path
         container.updatedAt = Date()
     }
 
@@ -359,16 +393,18 @@ private struct FullScreenPhotoView: View {
 #Preview {
     NavigationStack {
         ContainerDetailView(container: {
-            let loc = Location(name: "Garage")
-            let zone = Zone(name: "Wall Shelves", location: loc)
-            let c = Container(
-                name: "Tool Box",
+            let loc  = Location(name: "Basement")
+            let zone = Zone(name: "Kallax", location: loc)
+            let c    = Container(
+                name: "Cable Box",
                 type: .box,
-                notes: "Hand tools — hammer, screwdrivers, pliers",
+                notes: "HDMI, USB-C, power adapters",
                 locationId: loc.id,
                 zoneId: zone.id,
                 zone: zone
             )
+            c.items.append(Item(name: "Extension cable", quantity: 2))
+            c.items.append(Item(name: "HDMI cable"))
             return c
         }())
     }

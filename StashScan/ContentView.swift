@@ -2,53 +2,116 @@
 //  ContentView.swift
 //  StashScan
 //
-//  Home screen: location hierarchy + full-text search + QR scan entry point.
+//  Root view: TabView with Home and Scan tabs.
+//  Home tab hosts the full navigation stack (Locations → Zones → Containers).
 //
 
 import SwiftUI
 import SwiftData
 
-// MARK: - Search result model
+// MARK: - Shared design tokens (available across the module)
 
-private struct SearchResult: Identifiable {
-    var id: UUID { container.id }
-    let container: Container
-    /// The first item whose name matched the query, if the match was item-level.
-    let matchingItem: Item?
-    /// True when any field exactly equals the query — used for ranking.
-    let isExact: Bool
+let stashBlue      = Color(red: 24/255,  green: 95/255,  blue: 165/255)
+let stashBlueTint  = Color(red: 230/255, green: 241/255, blue: 251/255)
+let stashDeleteRed = Color(red: 226/255, green: 75/255,  blue:  74/255)
 
-    var locationPath: String {
-        let loc  = container.zone?.location?.name ?? "?"
-        let zone = container.zone?.name ?? "?"
-        return "\(loc) › \(zone)"
+// MARK: - Shared list-row icon
+
+struct ListIcon: View {
+    let symbol: String
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(stashBlue)
+            .frame(width: 26, height: 26)
+            .background(stashBlueTint)
+            .clipShape(RoundedRectangle(cornerRadius: 7))
     }
 }
 
 // MARK: - App routes (non-model navigation values)
 
-private enum AppRoute: Hashable {
+enum AppRoute: Hashable {
     case settings
 }
 
-// MARK: - ContentView
+// MARK: - Root ContentView (TabView)
 
 struct ContentView: View {
+    @State private var selectedTab: AppTab = .home
+    @State private var navigationPath = NavigationPath()
+
+    enum AppTab { case home, scan }
+
+    var body: some View {
+        TabView(selection: $selectedTab) {
+
+            // ── Home tab ───────────────────────────────────────────────
+            NavigationStack(path: $navigationPath) {
+                HomeView()
+                    .navigationDestination(for: Location.self) {
+                        LocationDetailView(location: $0)
+                    }
+                    .navigationDestination(for: Zone.self) {
+                        ZoneDetailView(zone: $0)
+                    }
+                    .navigationDestination(for: Container.self) {
+                        ContainerDetailView(container: $0)
+                    }
+                    .navigationDestination(for: AppRoute.self) { route in
+                        switch route {
+                        case .settings: SettingsView()
+                        }
+                    }
+            }
+            .tabItem { Label("Home", systemImage: "square.grid.2x2") }
+            .tag(AppTab.home)
+
+            // ── Scan tab ───────────────────────────────────────────────
+            ScannerView(onFound: { container in
+                selectedTab = .home
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    navigationPath.append(container)
+                }
+            }, cancellable: false)
+            .tabItem { Label("Scan", systemImage: "qrcode.viewfinder") }
+            .tag(AppTab.scan)
+        }
+    }
+}
+
+// MARK: - Search result model
+
+private struct SearchResult: Identifiable {
+    let id = UUID()
+
+    enum Kind {
+        case item(Item, Container)   // item name matched
+        case container(Container)    // container name / notes matched
+    }
+
+    let kind: Kind
+    let isExact: Bool
+
+    var containerForNav: Container {
+        switch kind {
+        case .item(_, let c): return c
+        case .container(let c): return c
+        }
+    }
+}
+
+// MARK: - Home view (locations list + search)
+
+private struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Location.name) private var locations: [Location]
     @Query(sort: \Container.name) private var allContainers: [Container]
 
-    @State private var searchText = ""
-    @State private var showAddLocation = false
-    @State private var locationToEdit: Location? = nil
+    @State private var searchText       = ""
+    @State private var showAddLocation  = false
     @State private var locationToDelete: Location? = nil
     @State private var showDeleteConfirm = false
-
-    // Scanner + programmatic navigation
-    @State private var showScanner = false
-    @State private var navigationPath = NavigationPath()
-
-    // MARK: Search
 
     private var trimmedQuery: String {
         searchText.trimmingCharacters(in: .whitespaces)
@@ -60,178 +123,158 @@ struct ContentView: View {
         var results: [SearchResult] = []
 
         for container in allContainers {
-            let name  = container.name.lowercased()
-            let notes = container.notes.lowercased()
-            let zone  = (container.zone?.name ?? "").lowercased()
-            let loc   = (container.zone?.location?.name ?? "").lowercased()
-
-            // Prefer an exact item match; fall back to partial.
-            let exactItem   = container.items.first { $0.name.lowercased() == lower }
-            let partialItem = exactItem
-                ?? container.items.first { $0.name.lowercased().contains(lower) }
-
-            let fieldHit = name.contains(lower) || notes.contains(lower)
-                        || zone.contains(lower)  || loc.contains(lower)
-
-            guard fieldHit || partialItem != nil else { continue }
-
-            let isExact = name == lower || notes == lower
-                       || zone == lower || loc == lower
-                       || exactItem != nil
-
-            results.append(SearchResult(
-                container: container,
-                matchingItem: partialItem,
-                isExact: isExact
-            ))
+            // One row per matching item
+            for item in container.items {
+                let itemLower = item.name.lowercased()
+                guard itemLower.contains(lower) else { continue }
+                results.append(SearchResult(
+                    kind: .item(item, container),
+                    isExact: itemLower == lower
+                ))
+            }
+            // Container name / notes match
+            let cLower = container.name.lowercased()
+            let nLower = container.notes.lowercased()
+            if cLower.contains(lower) || nLower.contains(lower) {
+                results.append(SearchResult(
+                    kind: .container(container),
+                    isExact: cLower == lower || nLower == lower
+                ))
+            }
         }
 
-        // Exact matches first; within each tier sort alphabetically by container name.
-        return results.sorted {
-            if $0.isExact != $1.isExact { return $0.isExact }
-            return $0.container.name
-                .localizedCaseInsensitiveCompare($1.container.name) == .orderedAscending
+        // Item rows before container rows; exact before partial; alpha within tier
+        return results.sorted { a, b in
+            let aItem: Bool; if case .item = a.kind { aItem = true } else { aItem = false }
+            let bItem: Bool; if case .item = b.kind { bItem = true } else { bItem = false }
+            if aItem != bItem { return aItem }
+            if a.isExact != b.isExact { return a.isExact }
+            return a.containerForNav.name
+                .localizedCaseInsensitiveCompare(b.containerForNav.name) == .orderedAscending
         }
     }
-
-    // MARK: Body
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            List {
-                if trimmedQuery.isEmpty {
-                    // ── Normal hierarchy ───────────────────────────────
-                    ForEach(locations) { location in
-                        NavigationLink(value: location) {
-                            Label(location.name, systemImage: "house")
+        List {
+            if trimmedQuery.isEmpty {
+                // ── Normal hierarchy ──────────────────────────────────
+                ForEach(locations) { location in
+                    NavigationLink(value: location) {
+                        HStack(spacing: 12) {
+                            ListIcon(symbol: "mappin.circle.fill")
+                            Text(location.name)
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                locationToDelete = location
-                                showDeleteConfirm = true
-                            } label: {
-                                Label("Delete", systemImage: "trash")
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            locationToDelete = location
+                            showDeleteConfirm = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                }
+            } else {
+                // ── Search results ────────────────────────────────────
+                if !searchResults.isEmpty {
+                    Section {
+                        ForEach(searchResults) { result in
+                            NavigationLink(value: result.containerForNav) {
+                                searchResultRow(result)
                             }
                         }
-                        .swipeActions(edge: .leading) {
-                            Button {
-                                locationToEdit = location
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                            .tint(.blue)
-                        }
-                    }
-                } else {
-                    // ── Search results ────────────────────────────────
-                    ForEach(searchResults) { result in
-                        NavigationLink(value: result.container) {
-                            searchResultRow(result)
-                        }
+                    } header: {
+                        Text("\(searchResults.count) item\(searchResults.count == 1 ? "" : "s") found")
+                            .font(.system(size: 12))
+                            .textCase(nil)
+                            .foregroundStyle(.secondary)
                     }
                 }
-            }
-            .navigationTitle("StashScan")
-            .searchable(text: $searchText, prompt: "Search containers, items, notes…")
-            .overlay { emptyStateOverlay }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showAddLocation = true } label: {
-                        Image(systemName: "plus")
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(value: AppRoute.settings) {
-                        Label("Settings", systemImage: "gear")
-                    }
-                }
-                ToolbarItem(placement: .bottomBar) { Spacer() }
-                ToolbarItem(placement: .bottomBar) {
-                    Button { showScanner = true } label: {
-                        Label("Scan", systemImage: "qrcode.viewfinder")
-                            .font(.headline)
-                    }
-                }
-                ToolbarItem(placement: .bottomBar) { Spacer() }
-            }
-            // All value-based navigation destinations are registered here at the root
-            // NavigationStack so every pushed view shares the same destination registry.
-            .navigationDestination(for: Location.self) { location in
-                LocationDetailView(location: location)
-            }
-            .navigationDestination(for: Zone.self) { zone in
-                ZoneDetailView(zone: zone)
-            }
-            .navigationDestination(for: Container.self) { container in
-                ContainerDetailView(container: container)
-            }
-            .navigationDestination(for: AppRoute.self) { route in
-                switch route {
-                case .settings: SettingsView()
-                }
-            }
-            .sheet(isPresented: $showAddLocation) {
-                AddEditLocationView()
-            }
-            .sheet(item: $locationToEdit) { location in
-                AddEditLocationView(location: location)
-            }
-            .confirmationDialog(
-                "Delete \"\(locationToDelete?.name ?? "")\"?",
-                isPresented: $showDeleteConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Delete", role: .destructive) {
-                    if let loc = locationToDelete { loc.delete(from: modelContext) }
-                    locationToDelete = nil
-                }
-                Button("Cancel", role: .cancel) { locationToDelete = nil }
-            } message: {
-                if let loc = locationToDelete { Text(deleteMessage(for: loc)) }
             }
         }
-        .fullScreenCover(isPresented: $showScanner) {
-            ScannerView { container in
-                showScanner = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                    navigationPath.append(container)
+        .navigationTitle("Locations")
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "Search items, containers, notes…"
+        )
+        .overlay { emptyStateOverlay }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showAddLocation = true } label: {
+                    Image(systemName: "plus")
                 }
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(value: AppRoute.settings) {
+                    Image(systemName: "gear")
+                }
+            }
+        }
+        .sheet(isPresented: $showAddLocation) {
+            AddEditLocationView()
+        }
+        .confirmationDialog(
+            "Delete \"\(locationToDelete?.name ?? "")\"?",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let loc = locationToDelete { loc.delete(from: modelContext) }
+                locationToDelete = nil
+            }
+            Button("Cancel", role: .cancel) { locationToDelete = nil }
+        } message: {
+            if let loc = locationToDelete { Text(deleteMessage(for: loc)) }
         }
     }
 
-    // MARK: - Search result row
+    // MARK: Search row
 
     @ViewBuilder
     private func searchResultRow(_ result: SearchResult) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: containerIcon(for: result.container.type))
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
-                .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(result.container.name)
-                if let item = result.matchingItem {
-                    Label(item.name, systemImage: "tag.fill")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 3) {
+            switch result.kind {
+            case .item(let item, let container):
+                HStack(spacing: 0) {
+                    Text(item.name)
+                        .font(.system(size: 13, weight: .bold))
+                    if let qty = item.quantity, qty > 1 {
+                        Text(" ×\(qty)")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                Text(result.locationPath)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                Text(
+                    "\(container.name) · " +
+                    "\(container.zone?.location?.name ?? "?") › " +
+                    "\(container.zone?.name ?? "?")"
+                )
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+
+            case .container(let container):
+                Text(container.name)
+                    .font(.system(size: 13, weight: .bold))
+                Text(
+                    "\(container.zone?.location?.name ?? "?") › " +
+                    "\(container.zone?.name ?? "?")"
+                )
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 2)
     }
 
-    // MARK: - Empty state
+    // MARK: Empty state
 
     @ViewBuilder
     private var emptyStateOverlay: some View {
         if trimmedQuery.isEmpty && locations.isEmpty {
             ContentUnavailableView(
                 "No Locations",
-                systemImage: "house.slash",
+                systemImage: "mappin.slash",
                 description: Text("Tap + to add your first location.")
             )
         } else if !trimmedQuery.isEmpty && searchResults.isEmpty {
@@ -239,24 +282,14 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Helpers
-
-    private func containerIcon(for type: ContainerType) -> String {
-        switch type {
-        case .box:    return "shippingbox"
-        case .bag:    return "bag"
-        case .bin:    return "trash"
-        case .drawer: return "square.stack"
-        case .shelf:  return "books.vertical"
-        case .other:  return "archivebox"
-        }
-    }
+    // MARK: Helpers
 
     private func deleteMessage(for location: Location) -> String {
         let zoneCount = location.zones.count
         let containerCount = location.zones.reduce(0) { $0 + $1.containers.count }
         if containerCount > 0 {
-            return "This will delete \(zoneCount) zone\(zoneCount == 1 ? "" : "s") and \(containerCount) container\(containerCount == 1 ? "" : "s") and all their contents."
+            return "This will delete \(zoneCount) zone\(zoneCount == 1 ? "" : "s") and " +
+                   "\(containerCount) container\(containerCount == 1 ? "" : "s") and all their contents."
         } else if zoneCount > 0 {
             return "This will delete \(zoneCount) zone\(zoneCount == 1 ? "" : "s")."
         } else {
