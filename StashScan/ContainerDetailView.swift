@@ -65,7 +65,7 @@ struct ContainerDetailView: View {
             itemsSection
             actionsSection
         }
-        .listStyle(.plain)
+        .listStyle(.insetGrouped)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
