@@ -120,6 +120,7 @@ private struct HomeView: View {
     @Query(sort: \Container.name) private var allContainers: [Container]
 
     @State private var searchText        = ""
+    @State private var isSearchActive    = false
     @State private var showAddLocation   = false
     @State private var locationToDelete: Location? = nil
     @State private var showDeleteConfirm = false
@@ -163,21 +164,14 @@ private struct HomeView: View {
     }
 
     var body: some View {
-        // SearchListView is a child so @Environment(\.isSearching) works correctly —
-        // reading isSearching in the same view as .searchable(displayMode:.always)
-        // always returns true.
         SearchListView(
             searchText: $searchText,
+            isSearchActive: $isSearchActive,
             locations: locations,
             searchResults: searchResults,
             trimmedQuery: trimmedQuery,
             locationToDelete: $locationToDelete,
             showDeleteConfirm: $showDeleteConfirm
-        )
-        .searchable(
-            text: $searchText,
-            placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Search items, containers, notes…"
         )
         .navigationTitle("Locations")
         .toolbar {
@@ -225,13 +219,12 @@ private struct HomeView: View {
 }
 
 // MARK: - Search list view
-// Child of HomeView so that @Environment(\.isSearching) returns the correct value.
 
 private struct SearchListView: View {
-    @Environment(\.isSearching) private var isSearching
-    @Environment(\.dismissSearch) private var dismissSearch
+    @FocusState private var searchFocused: Bool
 
     @Binding var searchText: String
+    @Binding var isSearchActive: Bool
     let locations: [Location]
     let searchResults: [SearchResult]
     let trimmedQuery: String
@@ -240,7 +233,7 @@ private struct SearchListView: View {
 
     var body: some View {
         List {
-            if isSearching {
+            if isSearchActive {
                 // ── Search mode: hide location list, show results only ─
                 if !searchResults.isEmpty {
                     Section {
@@ -257,7 +250,7 @@ private struct SearchListView: View {
                     }
                 }
             } else {
-                // ── Normal hierarchy ──────────────────────────────────
+                // ── Normal hierarchy ─────────────────────────────────
                 ForEach(locations) { location in
                     NavigationLink(value: location) {
                         HStack(spacing: 12) {
@@ -277,17 +270,47 @@ private struct SearchListView: View {
                 }
             }
         }
-        // Back arrow in leading position when search is active (replaces search icon).
-        .toolbar {
-            if isSearching {
-                ToolbarItem(placement: .navigationBarLeading) {
+        .safeAreaInset(edge: .top, spacing: 0) {
+            // Custom search bar — left icon swaps between magnifier and back chevron.
+            HStack(spacing: 8) {
+                if isSearchActive {
                     Button {
-                        dismissSearch()
+                        searchText = ""
+                        isSearchActive = false
+                        searchFocused = false
                     } label: {
                         Image(systemName: "chevron.left")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 20)
+                    }
+                } else {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20)
+                }
+
+                TextField("Search items, containers, notes…", text: $searchText)
+                    .focused($searchFocused)
+                    .onChange(of: searchFocused) { _, focused in
+                        if focused { isSearchActive = true }
+                    }
+                    .submitLabel(.search)
+
+                if !searchText.isEmpty {
+                    Button {
+                        searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(Color(.tertiaryLabel))
                     }
                 }
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemBackground))
         }
         .overlay { emptyStateOverlay }
     }
@@ -346,13 +369,13 @@ private struct SearchListView: View {
 
     @ViewBuilder
     private var emptyStateOverlay: some View {
-        if !isSearching && locations.isEmpty {
+        if !isSearchActive && locations.isEmpty {
             ContentUnavailableView(
                 "No Locations",
                 systemImage: "mappin.slash",
                 description: Text("Tap + to add your first location.")
             )
-        } else if isSearching && !trimmedQuery.isEmpty && searchResults.isEmpty {
+        } else if isSearchActive && !trimmedQuery.isEmpty && searchResults.isEmpty {
             ContentUnavailableView.search(text: searchText)
         }
     }
