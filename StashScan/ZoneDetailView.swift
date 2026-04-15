@@ -10,6 +10,7 @@ import SwiftData
 
 struct ZoneDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
 
     let zone: Zone
 
@@ -49,6 +50,7 @@ struct ZoneDetailView: View {
         }
         .navigationTitle(zone.name)
         .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(true)
         .overlay {
             if containers.isEmpty {
                 ContentUnavailableView(
@@ -59,6 +61,14 @@ struct ZoneDetailView: View {
             }
         }
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button { dismiss() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left").fontWeight(.semibold)
+                        Text(zone.location?.name ?? "Back")
+                    }
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     showAddContainer = true

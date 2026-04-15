@@ -10,6 +10,7 @@ import SwiftData
 
 struct LocationDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
 
     let location: Location
 
@@ -49,6 +50,7 @@ struct LocationDetailView: View {
         }
         .navigationTitle(location.name)
         .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(true)
         .overlay {
             if zones.isEmpty {
                 ContentUnavailableView(
@@ -59,6 +61,14 @@ struct LocationDetailView: View {
             }
         }
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button { dismiss() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left").fontWeight(.semibold)
+                        Text("Locations")
+                    }
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     showAddZone = true

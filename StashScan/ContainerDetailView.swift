@@ -68,7 +68,16 @@ struct ContainerDetailView: View {
         .listStyle(.insetGrouped)
         .navigationTitle(container.name)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button { dismiss() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left").fontWeight(.semibold)
+                        Text(container.zone?.name ?? "Back")
+                    }
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showEditContainer = true } label: {
                     Image(systemName: "pencil")
