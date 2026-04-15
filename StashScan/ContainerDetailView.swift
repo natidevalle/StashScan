@@ -86,8 +86,14 @@ struct ContainerDetailView: View {
                     Image(systemName: "pencil")
                 }
             }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    itemFocus = nil
+                }
+            }
         }
-        .scrollDismissesKeyboard(.interactively)
+        .scrollDismissesKeyboard(.never)
         // Photo action sheet (placeholder tap)
         .confirmationDialog("Add Photo", isPresented: $showPhotoActionSheet) {
             Button("Choose from Library") { showPhotoLibrary = true }
