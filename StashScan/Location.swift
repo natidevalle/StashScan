@@ -26,8 +26,8 @@ final class Location {
     func delete(from context: ModelContext) {
         for zone in zones {
             for container in zone.containers {
-                if let photoPath = container.photo {
-                    try? FileManager.default.removeItem(atPath: photoPath)
+                if let url = container.photoURL {
+                    try? FileManager.default.removeItem(at: url)
                 }
             }
         }

@@ -104,7 +104,7 @@ struct ContainerDetailView: View {
         .sheet(isPresented: $showMoveContainer)  { MoveContainerView(container: container) }
         .sheet(isPresented: $showPrintPreview)   { PrintPreviewView(container: container) }
         .fullScreenCover(isPresented: $showFullScreenPhoto) {
-            FullScreenPhotoView(photoPath: container.photo ?? "")
+            FullScreenPhotoView(photoPath: container.photoURL?.path ?? "")
         }
         .confirmationDialog(
             "Delete \"\(container.name)\"?",
@@ -143,7 +143,7 @@ struct ContainerDetailView: View {
             VStack(alignment: .leading, spacing: 0) {
 
                 // Photo strip
-                if let path = container.photo, let img = UIImage(contentsOfFile: path) {
+                if let url = container.photoURL, let img = UIImage(contentsOfFile: url.path) {
                     Button { showFullScreenPhoto = true } label: {
                         Image(uiImage: img)
                             .resizable()
@@ -348,15 +348,15 @@ struct ContainerDetailView: View {
     // MARK: - Photo
 
     private func savePhoto(_ image: UIImage) {
-        if let existingPath = container.photo {
-            try? FileManager.default.removeItem(atPath: existingPath)
+        if let existingURL = container.photoURL {
+            try? FileManager.default.removeItem(at: existingURL)
         }
         guard let data = image.jpegData(compressionQuality: 0.8) else { return }
         let filename = UUID().uuidString + ".jpg"
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(filename)
         try? data.write(to: url)
-        container.photo     = url.path
+        container.photo     = filename   // store filename only, not full path
         container.updatedAt = Date()
     }
 

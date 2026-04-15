@@ -118,8 +118,8 @@ struct AddEditContainerView: View {
         name = container.name
         type = container.type
         notes = container.notes
-        if let path = container.photo {
-            displayImage = UIImage(contentsOfFile: path)
+        if let url = container.photoURL {
+            displayImage = UIImage(contentsOfFile: url.path)
         }
     }
 
@@ -131,8 +131,8 @@ struct AddEditContainerView: View {
 
         if photoChanged {
             // Delete old photo file if one existed
-            if let oldPath = container?.photo {
-                try? FileManager.default.removeItem(atPath: oldPath)
+            if let oldURL = container?.photoURL {
+                try? FileManager.default.removeItem(at: oldURL)
             }
             // Save new photo if the user picked one
             if let image = displayImage {
@@ -171,7 +171,7 @@ private func savePhotoToDisk(_ image: UIImage) -> String? {
     let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         .appendingPathComponent(filename)
     try? data.write(to: url)
-    return url.path
+    return filename   // store filename only, not full path
 }
 
 #Preview("Add") {

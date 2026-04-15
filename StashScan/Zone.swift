@@ -28,8 +28,8 @@ final class Zone {
     /// Use this instead of calling context.delete(_:) directly.
     func delete(from context: ModelContext) {
         for container in containers {
-            if let photoPath = container.photo {
-                try? FileManager.default.removeItem(atPath: photoPath)
+            if let url = container.photoURL {
+                try? FileManager.default.removeItem(at: url)
             }
         }
         context.delete(self)
