@@ -51,11 +51,6 @@ struct ContainerDetailView: View {
         return "\(loc) > \(zone)"
     }
 
-    private static let dateFmt: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "d MMM yyyy, HH:mm"
-        return f
-    }()
 
     // MARK: Body
 
@@ -76,14 +71,22 @@ struct ContainerDetailView: View {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button { dismiss() } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "chevron.left").fontWeight(.semibold)
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .regular))
                         Text(container.zone?.name ?? "Back")
+                            .font(.body)
                     }
+                    .foregroundColor(.primary)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(Capsule())
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showEditContainer = true } label: {
                     Image(systemName: "pencil")
+                        .foregroundStyle(Color(.label))
                 }
             }
         }
@@ -156,84 +159,79 @@ struct ContainerDetailView: View {
 
                 // Photo strip
                 if let url = container.photoURL, let img = UIImage(contentsOfFile: url.path) {
-                    Button { showFullScreenPhoto = true } label: {
-                        Image(uiImage: img)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 135)
-                            .clipped()
-                    }
-                    .buttonStyle(.plain)
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 140)
+                        .clipped()
+                        .contentShape(Rectangle())
                 } else {
                     Button { showPhotoActionSheet = true } label: {
                         ZStack {
-                            Color(.systemGray6)
+                            Color(.secondarySystemBackground)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 80)
-                            VStack(spacing: 6) {
+                            VStack(spacing: 8) {
                                 Image(systemName: "camera")
-                                    .font(.title2)
-                                    .foregroundStyle(.secondary)
+                                    .font(.system(size: 24))
+                                    .foregroundColor(Color(.tertiaryLabel))
                                 Text("Tap to add photo")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(.secondary)
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(.tertiaryLabel))
                             }
                         }
                     }
                     .buttonStyle(.plain)
                 }
 
-                // Details
-                VStack(alignment: .leading, spacing: 8) {
+                // Details (DS §9.2)
+                VStack(alignment: .leading, spacing: 6) {
 
                     // Row 1: name + type pill
                     HStack(alignment: .firstTextBaseline) {
                         Text(container.name)
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.title2)
+                            .foregroundColor(.primary)
                         Spacer()
                         Text(container.type.rawValue)
-                            .font(.system(size: 13))
-                            .foregroundStyle(stashBlue)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 3)
-                            .overlay(Capsule().stroke(stashBlue, lineWidth: 1))
+                            .font(.caption)
+                            .foregroundColor(Color.dsAccentForeground)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.dsAccentMuted)
+                            .clipShape(Capsule())
                     }
 
                     // Row 2: notes (hidden if empty)
                     if !container.notes.isEmpty {
                         Text(container.notes)
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
+                            .font(.subheadline)
+                            .foregroundStyle(Color(.secondaryLabel))
                     }
 
-                    // Row 3: location path
-                    HStack(spacing: 5) {
+                    // Row 3: location path (DS §7.2)
+                    HStack(spacing: 4) {
                         Image(systemName: "mappin.circle")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(.secondaryLabel))
                         Text(locationPath)
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
+                            .font(.subheadline)
+                            .foregroundColor(Color(.secondaryLabel))
                     }
 
-                    // Row 4: updated date
-                    HStack(spacing: 5) {
+                    // Row 4: updated timestamp (DS §7.3)
+                    HStack(spacing: 4) {
                         Image(systemName: "clock")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
-                        Text(Self.dateFmt.string(from: container.updatedAt))
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(.secondaryLabel))
+                        Text(container.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption)
+                            .foregroundColor(Color(.secondaryLabel))
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-
-                // Subtle separator before items
-                Rectangle()
-                    .fill(Color(.separator))
-                    .frame(maxWidth: .infinity, minHeight: 0.33, maxHeight: 0.33)
             }
         }
         .listRowInsets(EdgeInsets())
@@ -248,12 +246,12 @@ struct ContainerDetailView: View {
             ForEach(sortedItems) { item in
                 HStack {
                     Text(item.name)
-                        .font(.system(size: 17))
+                        .font(.body)
                     Spacer()
                     if let qty = item.quantity, qty > 0 {
                         Text("×\(qty)")
-                            .font(.system(size: 17))
-                            .foregroundStyle(.secondary)
+                            .font(.body)
+                            .foregroundStyle(Color(.secondaryLabel))
                             .monospacedDigit()
                     }
                 }
@@ -293,21 +291,28 @@ struct ContainerDetailView: View {
                 .font(.system(size: 15))
             }
 
-            // "Add item" action row (same style as Move / Print rows)
+            // "Add item" action row (DS §7.6 / §5.2)
             if !isAddingItem {
                 Button {
                     isAddingItem = true
                     itemFocus    = .name
                 } label: {
-                    Label("Add item", systemImage: "plus.circle")
-                        .font(.system(size: 17))
-                        .foregroundStyle(.primary)
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 22))
+                            .foregroundColor(Color.dsAccent)
+                            .frame(width: 28)
+                        Text("Add item")
+                            .font(.callout)
+                            .foregroundColor(Color.dsAccent)
+                        Spacer()
+                    }
                 }
             }
         } header: {
             Text("ITEMS")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.primary)
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(Color(.secondaryLabel))
         }
     }
 
@@ -317,24 +322,45 @@ struct ContainerDetailView: View {
     private var actionsSection: some View {
         Section {
             Button { showMoveContainer = true } label: {
-                Label("Move Container", systemImage: "arrow.up.right.square")
-                    .font(.system(size: 17))
-                    .foregroundStyle(.primary)
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.system(size: 22))
+                        .foregroundColor(Color.dsAccent)
+                        .frame(width: 28)
+                    Text("Move Container")
+                        .font(.callout)
+                        .foregroundColor(Color.dsAccent)
+                    Spacer()
+                }
             }
             Button { showPrintPreview = true } label: {
-                Label("Print Label", systemImage: "printer")
-                    .font(.system(size: 17))
-                    .foregroundStyle(.primary)
+                HStack(spacing: 12) {
+                    Image(systemName: "printer")
+                        .font(.system(size: 22))
+                        .foregroundColor(Color.dsAccent)
+                        .frame(width: 28)
+                    Text("Print Label")
+                        .font(.callout)
+                        .foregroundColor(Color.dsAccent)
+                    Spacer()
+                }
             }
             Button { showDeleteConfirm = true } label: {
-                Label("Delete Container", systemImage: "trash")
-                    .font(.system(size: 17))
-                    .foregroundStyle(stashDeleteRed)
+                HStack(spacing: 12) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 22))
+                        .foregroundColor(.red)
+                        .frame(width: 28)
+                    Text("Delete Container")
+                        .font(.callout)
+                        .foregroundColor(.red)
+                    Spacer()
+                }
             }
         } header: {
             Text("ACTIONS")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.primary)
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(Color(.secondaryLabel))
         }
     }
 
