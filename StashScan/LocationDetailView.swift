@@ -36,7 +36,16 @@ struct LocationDetailView: View {
                     HStack(spacing: 12) {
                         ListIcon(symbol: "square.dashed")
                         Text(zone.name)
+                            .font(.body).fontWeight(.semibold)
+                        Spacer()
+                        let count = zone.containers.count
+                        if count > 0 {
+                            Text("\(count)")
+                                .font(.caption)
+                                .foregroundStyle(Color(.secondaryLabel))
+                        }
                     }
+                    .padding(.vertical, 12)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
@@ -53,20 +62,35 @@ struct LocationDetailView: View {
         .navigationBarBackButtonHidden(true)
         .overlay {
             if zones.isEmpty {
-                ContentUnavailableView(
-                    "No Zones",
-                    systemImage: "square.dashed",
-                    description: Text("Tap + to add the first zone.")
-                )
+                VStack(spacing: 12) {
+                    Image(systemName: "square.dashed")
+                        .font(.system(size: 48))
+                        .foregroundColor(Color(.tertiaryLabel))
+                    Text("No Zones")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Text("Tap + to add the first zone.")
+                        .font(.subheadline)
+                        .foregroundColor(Color(.secondaryLabel))
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button { dismiss() } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "chevron.left").fontWeight(.semibold)
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .regular))
                         Text("Locations")
+                            .font(.body)
                     }
+                    .foregroundColor(.primary)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(Capsule())
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -74,6 +98,7 @@ struct LocationDetailView: View {
                     showAddZone = true
                 } label: {
                     Image(systemName: "plus")
+                        .foregroundStyle(Color(.label))
                 }
             }
         }

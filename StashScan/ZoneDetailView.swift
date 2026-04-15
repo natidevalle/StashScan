@@ -36,7 +36,9 @@ struct ZoneDetailView: View {
                     HStack(spacing: 12) {
                         ListIcon(symbol: "shippingbox")
                         Text(container.name)
+                            .font(.body).fontWeight(.semibold)
                     }
+                    .padding(.vertical, 12)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
@@ -53,20 +55,35 @@ struct ZoneDetailView: View {
         .navigationBarBackButtonHidden(true)
         .overlay {
             if containers.isEmpty {
-                ContentUnavailableView(
-                    "No Containers",
-                    systemImage: "archivebox",
-                    description: Text("Tap + to add the first container.")
-                )
+                VStack(spacing: 12) {
+                    Image(systemName: "shippingbox")
+                        .font(.system(size: 48))
+                        .foregroundColor(Color(.tertiaryLabel))
+                    Text("No Containers")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Text("Tap + to add the first container.")
+                        .font(.subheadline)
+                        .foregroundColor(Color(.secondaryLabel))
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button { dismiss() } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "chevron.left").fontWeight(.semibold)
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .regular))
                         Text(zone.location?.name ?? "Back")
+                            .font(.body)
                     }
+                    .foregroundColor(.primary)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(Capsule())
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -74,6 +91,7 @@ struct ZoneDetailView: View {
                     showAddContainer = true
                 } label: {
                     Image(systemName: "plus")
+                        .foregroundStyle(Color(.label))
                 }
             }
         }
