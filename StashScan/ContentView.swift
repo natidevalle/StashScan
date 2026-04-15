@@ -37,11 +37,13 @@ enum AppRoute: Hashable {
 // MARK: - Root ContentView (TabView)
 
 struct ContentView: View {
-    // .inNav has no matching tab item tag → no tab highlighted when navigating deep.
-    enum AppTab: Hashable { case home, scan, inNav }
+    enum AppTab: Hashable { case home, scan }
 
     @State private var selectedTab: AppTab = .home
     @State private var navigationPath = NavigationPath()
+
+    // Home tab item is highlighted only when at the root of the home stack.
+    private var homeIsSelected: Bool { selectedTab == .home && navigationPath.isEmpty }
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -64,6 +66,8 @@ struct ContentView: View {
                         }
                     }
             }
+            // Hide native tab bar so our custom bar controls selection state.
+            .toolbar(.hidden, for: .tabBar)
             .tabItem { Label("Home", systemImage: "house") }
             .tag(AppTab.home)
 
@@ -74,20 +78,59 @@ struct ContentView: View {
                     navigationPath.append(container)
                 }
             }, cancellable: false)
+            .toolbar(.hidden, for: .tabBar)
             .tabItem { Label("Scan", systemImage: "qrcode.viewfinder") }
             .tag(AppTab.scan)
         }
-        // Deselect Home tab when navigating into the stack; reselect when back at root.
-        .onChange(of: navigationPath.count) { _, count in
-            if count > 0, selectedTab == .home  { selectedTab = .inNav }
-            else if count == 0, selectedTab == .inNav { selectedTab = .home }
+        // Custom tab bar: Home is highlighted only at root; tapping Home while deep pops to root.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            AppTabBar(
+                homeIsSelected: homeIsSelected,
+                scanIsSelected: selectedTab == .scan,
+                onHomeTap: {
+                    if selectedTab == .home {
+                        navigationPath = NavigationPath()
+                    } else {
+                        selectedTab = .home
+                    }
+                },
+                onScanTap: { selectedTab = .scan }
+            )
         }
-        // Tapping Home tab from a child screen pops to root.
-        .onChange(of: selectedTab) { _, tab in
-            if tab == .home, !navigationPath.isEmpty {
-                navigationPath = NavigationPath()
+    }
+}
+
+// MARK: - Custom tab bar
+
+private struct AppTabBar: View {
+    let homeIsSelected: Bool
+    let scanIsSelected: Bool
+    let onHomeTap: () -> Void
+    let onScanTap: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            tabButton("Home", symbol: "house",             selectedSymbol: "house.fill",    isSelected: homeIsSelected, action: onHomeTap)
+            tabButton("Scan", symbol: "qrcode.viewfinder",                                isSelected: scanIsSelected, action: onScanTap)
+        }
+        .frame(height: 49)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
+    }
+
+    private func tabButton(_ title: String, symbol: String, selectedSymbol: String? = nil, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                Image(systemName: isSelected ? (selectedSymbol ?? symbol) : symbol)
+                    .font(.system(size: 22))
+                Text(title)
+                    .font(.system(size: 10))
             }
+            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 }
 
