@@ -313,6 +313,9 @@ private struct SearchListView: View {
                 }
             }
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear.frame(height: 49)
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             // Custom search bar — left icon swaps between magnifier and back chevron.
             HStack(spacing: 8) {

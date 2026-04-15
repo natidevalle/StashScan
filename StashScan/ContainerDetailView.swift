@@ -66,6 +66,9 @@ struct ContainerDetailView: View {
             actionsSection
         }
         .listStyle(.insetGrouped)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear.frame(height: 49)
+        }
         .navigationTitle(container.name)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
