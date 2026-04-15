@@ -40,7 +40,19 @@ struct PrintPreviewView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button { dismiss() } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .regular))
+                            Text(container.name)
+                                .font(.body)
+                        }
+                        .foregroundColor(.primary)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(Capsule())
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     printButton
@@ -97,6 +109,10 @@ struct PrintPreviewView: View {
                 ProgressView()
                     .scaleEffect(0.7)
                     .tint(statusColor)
+            } else if printer.state == .ready {
+                Image(systemName: "printer.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color.dsSuccess)
             } else {
                 Circle()
                     .fill(statusColor)
@@ -107,11 +123,11 @@ struct PrintPreviewView: View {
 
     private var statusColor: Color {
         switch printer.state {
-        case .ready:                return .green
+        case .ready:                return Color.dsSuccess
         case .error:                return .red
         case .bluetoothUnavailable: return .red
         case .scanning, .connecting, .printing: return .orange
-        case .disconnected:         return .secondary
+        case .disconnected:         return Color(.secondaryLabel)
         }
     }
 
@@ -120,13 +136,14 @@ struct PrintPreviewView: View {
     @ViewBuilder
     private var printerSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Printer")
-                .font(.headline)
+            Text("PRINTER")
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(Color(.secondaryLabel))
 
             switch printer.state {
             case .bluetoothUnavailable:
                 Label("Bluetooth is unavailable on this device.", systemImage: "bluetooth.slash")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.secondaryLabel))
                     .font(.subheadline)
 
             case .disconnected:
@@ -136,7 +153,7 @@ struct PrintPreviewView: View {
             case .error:
                 Text("Tap Connect to try again.")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.secondaryLabel))
                 connectButton
 
             case .scanning:
@@ -144,56 +161,67 @@ struct PrintPreviewView: View {
                     progressRow("Scanning for Phomemo Q02E…")
                     Text("Make sure the printer is powered on and within range.")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.secondaryLabel))
                 }
 
             case .connecting:
                 progressRow("Connecting to printer…")
 
             case .ready:
-                HStack(spacing: 10) {
-                    Image(systemName: "printer")
-                        .foregroundStyle(.green)
+                HStack(spacing: 8) {
+                    Image(systemName: "printer.fill")
+                        .foregroundColor(Color.dsSuccess)
                     Text("Phomemo Q02E – Ready")
+                        .font(.subheadline)
                     Spacer()
                     Button("Disconnect") { printer.disconnectAndForget() }
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.secondaryLabel))
                 }
 
             case .printing:
                 progressRow("Sending data to printer…")
             }
         }
-        .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .padding(16)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private var firstTimePairingHint: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Label("First time using the printer?", systemImage: "info.circle")
-                .font(.subheadline.bold())
+                .font(.subheadline)
+                .foregroundStyle(Color(.secondaryLabel))
             Text("Open **Settings → Bluetooth** and pair your Phomemo Q02E, then tap Connect here.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.secondaryLabel))
         }
     }
 
     private var connectButton: some View {
-        Button {
-            printer.startScan()
-        } label: {
-            Label("Connect to Printer", systemImage: "printer")
-                .frame(maxWidth: .infinity)
+        Button { printer.startScan() } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "printer")
+                    .font(.system(size: 18))
+                Text("Connect to Printer")
+                    .font(.body)
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color.dsAccent)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.plain)
     }
 
     private func progressRow(_ label: String) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             ProgressView()
             Text(label)
-                .foregroundStyle(.secondary)
+                .font(.subheadline)
+                .foregroundStyle(Color(.secondaryLabel))
         }
     }
 
@@ -205,7 +233,7 @@ struct PrintPreviewView: View {
             printer.print(data: data)
         } label: {
             Text("Print")
-                .fontWeight(.semibold)
+                .font(.body)
         }
         .disabled(printer.state != .ready)
     }

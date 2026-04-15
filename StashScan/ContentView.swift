@@ -37,6 +37,12 @@ extension Color {
             ? UIColor(red: 0.941, green: 0.835, blue: 0.761, alpha: 1)
             : UIColor(red: 0.420, green: 0.200, blue: 0.094, alpha: 1)
     })
+    /// Muted green success — printer connected (DS §2.2)
+    static let dsSuccess = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.35, green: 0.75, blue: 0.55, alpha: 1)
+            : UIColor(red: 0.20, green: 0.60, blue: 0.40, alpha: 1)
+    })
 }
 
 // MARK: - Shared list-row icon
