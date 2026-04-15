@@ -86,14 +86,11 @@ struct ContainerDetailView: View {
                     Image(systemName: "pencil")
                 }
             }
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    itemFocus = nil
-                }
-            }
         }
-        .scrollDismissesKeyboard(.never)
+        .scrollDismissesKeyboard(.interactively)
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
         // Photo action sheet (placeholder tap)
         .confirmationDialog("Add Photo", isPresented: $showPhotoActionSheet) {
             Button("Choose from Library") { showPhotoLibrary = true }
