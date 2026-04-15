@@ -8,6 +8,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 // MARK: - Shared design tokens (available across the module)
 
@@ -15,15 +16,38 @@ let stashBlue      = Color(red: 24/255,  green: 95/255,  blue: 165/255)
 let stashBlueTint  = Color(red: 230/255, green: 241/255, blue: 251/255)
 let stashDeleteRed = Color(red: 226/255, green: 75/255,  blue:  74/255)
 
+// MARK: - Design System colour tokens (DS §2)
+
+extension Color {
+    /// Clay accent — #B3673A light / #C97F55 dark (DS §2.1)
+    static let dsAccent = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.788, green: 0.498, blue: 0.333, alpha: 1)
+            : UIColor(red: 0.702, green: 0.404, blue: 0.286, alpha: 1)
+    })
+    /// Muted accent fill — #E8D5C8 light / #3D2416 dark (DS §2.1)
+    static let dsAccentMuted = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.239, green: 0.141, blue: 0.086, alpha: 1)
+            : UIColor(red: 0.910, green: 0.835, blue: 0.784, alpha: 1)
+    })
+    /// Accent foreground text — #6B3318 light / #F0D5C2 dark (DS §2.1)
+    static let dsAccentForeground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.941, green: 0.835, blue: 0.761, alpha: 1)
+            : UIColor(red: 0.420, green: 0.200, blue: 0.094, alpha: 1)
+    })
+}
+
 // MARK: - Shared list-row icon
-// Outline-only, primary label colour, no background.
+// Outline-only, secondaryLabel colour, 20pt (DS §5.1, §7.1).
 
 struct ListIcon: View {
     let symbol: String
     var body: some View {
         Image(systemName: symbol)
-            .font(.system(size: 17))
-            .foregroundStyle(.primary)
+            .font(.system(size: 20))
+            .foregroundStyle(Color(.secondaryLabel))
             .frame(width: 28, height: 28)
     }
 }
@@ -127,7 +151,7 @@ private struct AppTabBar: View {
                 Text(title)
                     .font(.system(size: 10))
             }
-            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+            .foregroundStyle(isSelected ? Color.dsAccent : Color(.secondaryLabel))
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
@@ -222,11 +246,13 @@ private struct HomeView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showAddLocation = true } label: {
                     Image(systemName: "plus")
+                        .foregroundStyle(Color(.label))
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 NavigationLink(value: AppRoute.settings) {
-                    Image(systemName: "gear")
+                    Image(systemName: "gearshape")
+                        .foregroundStyle(Color(.label))
                 }
             }
         }
@@ -288,9 +314,9 @@ private struct SearchListView: View {
                         }
                     } header: {
                         Text("\(searchResults.count) result\(searchResults.count == 1 ? "" : "s")")
-                            .font(.system(size: 13))
+                            .font(.system(size: 12, weight: .regular))
                             .textCase(nil)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.secondaryLabel))
                     }
                 }
             } else {
@@ -300,8 +326,9 @@ private struct SearchListView: View {
                         HStack(spacing: 12) {
                             ListIcon(symbol: "mappin.circle")
                             Text(location.name)
-                                .font(.system(size: 17))
+                                .font(.body)
                         }
+                        .padding(.vertical, 12)
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
@@ -326,13 +353,17 @@ private struct SearchListView: View {
                         isSearchActive = false
                         searchFocused = false
                     } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .regular))
-                            .foregroundColor(.primary)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(Capsule())
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .regular))
+                            Text("Locations")
+                                .font(.body)
+                        }
+                        .foregroundColor(.primary)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(Capsule())
                     }
 
                     HStack(spacing: 8) {
@@ -398,20 +429,21 @@ private struct SearchListView: View {
                 case .container: Image(systemName: "shippingbox")
                 }
             }
-            .font(.system(size: 17))
-            .foregroundStyle(.primary)
-            .frame(width: 28, height: 28)
+            .font(.system(size: 20))
+            .foregroundStyle(Color(.secondaryLabel))
+            .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 3) {
                 switch result.kind {
                 case .item(let item, let container):
-                    HStack(spacing: 0) {
+                    HStack(spacing: 4) {
                         Text(item.name)
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.body).fontWeight(.semibold)
+                            .foregroundStyle(Color(.label))
                         if let qty = item.quantity, qty > 1 {
-                            Text(" ×\(qty)")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(.secondary)
+                            Text("×\(qty)")
+                                .font(.body)
+                                .foregroundStyle(Color(.secondaryLabel))
                         }
                     }
                     Text(
@@ -419,22 +451,23 @@ private struct SearchListView: View {
                         "\(container.zone?.location?.name ?? "?") > " +
                         "\(container.zone?.name ?? "?")"
                     )
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+                    .foregroundStyle(Color(.secondaryLabel))
 
                 case .container(let container):
                     Text(container.name)
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.body).fontWeight(.semibold)
+                        .foregroundStyle(Color(.label))
                     Text(
                         "\(container.zone?.location?.name ?? "?") > " +
                         "\(container.zone?.name ?? "?")"
                     )
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+                    .foregroundStyle(Color(.secondaryLabel))
                 }
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 12)
     }
 
     // MARK: Empty state
@@ -442,11 +475,19 @@ private struct SearchListView: View {
     @ViewBuilder
     private var emptyStateOverlay: some View {
         if !isSearchActive && locations.isEmpty {
-            ContentUnavailableView(
-                "No Locations",
-                systemImage: "mappin.slash",
-                description: Text("Tap + to add your first location.")
-            )
+            VStack(spacing: 12) {
+                Image(systemName: "mappin.circle")
+                    .font(.system(size: 48))
+                    .foregroundColor(Color(.tertiaryLabel))
+                Text("No Locations")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Text("Tap + to add your first location.")
+                    .font(.subheadline)
+                    .foregroundColor(Color(.secondaryLabel))
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if isSearchActive && !trimmedQuery.isEmpty && searchResults.isEmpty {
             ContentUnavailableView.search(text: searchText)
         }
