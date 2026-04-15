@@ -9,6 +9,7 @@ import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
 
     @AppStorage("lastExportDate") private var lastExportTimestamp: Double = 0
 
@@ -25,13 +26,35 @@ struct SettingsView: View {
 
     var body: some View {
         List {
-            Section("Export & Backup") {
+            Section {
                 exportRow
                 importRow
+            } header: {
+                Text("EXPORT & BACKUP")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(Color(.secondaryLabel))
             }
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button { dismiss() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .regular))
+                        Text("Locations")
+                            .font(.body)
+                    }
+                    .foregroundColor(.primary)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(Capsule())
+                }
+            }
+        }
         .sheet(isPresented: $showShareSheet) {
             if let url = shareURL {
                 ShareSheet(items: [url])
@@ -65,24 +88,41 @@ struct SettingsView: View {
             Button {
                 performExport()
             } label: {
-                Label("Export backup", systemImage: "arrow.up.doc")
-                    .foregroundStyle(.primary)
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.up.doc")
+                        .font(.system(size: 22))
+                        .foregroundColor(Color.dsAccent)
+                        .frame(width: 28)
+                    Text("Export backup")
+                        .font(.callout)
+                        .foregroundColor(Color.dsAccent)
+                    Spacer()
+                }
             }
             if let date = lastExportDate {
                 Text("Last export: \(date.formatted(date: .abbreviated, time: .shortened))")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.secondaryLabel))
+                    .padding(.leading, 40)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 8)
     }
 
     private var importRow: some View {
         Button {
             showDocumentPicker = true
         } label: {
-            Label("Import backup", systemImage: "arrow.down.doc")
-                .foregroundStyle(.primary)
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.down.doc")
+                    .font(.system(size: 22))
+                    .foregroundColor(Color.dsAccent)
+                    .frame(width: 28)
+                Text("Import backup")
+                    .font(.callout)
+                    .foregroundColor(Color.dsAccent)
+                Spacer()
+            }
         }
     }
 
