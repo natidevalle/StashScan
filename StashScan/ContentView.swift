@@ -317,11 +317,6 @@ private struct SearchListView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Color.clear.frame(height: 49)
         }
-        // Re-apply focus after the inactive→active branch swap so the keyboard
-        // opens immediately without requiring a second tap.
-        .onChange(of: isSearchActive) { _, active in
-            if active { searchFocused = true }
-        }
         .safeAreaInset(edge: .top, spacing: 0) {
             if isSearchActive {
                 // Search active: pill back button + separate search input pill
@@ -346,8 +341,10 @@ private struct SearchListView: View {
                             .font(.system(size: 16))
                         TextField("Search items, containers, notes…", text: $searchText)
                             .focused($searchFocused)
-                            .onChange(of: searchFocused) { _, focused in
-                                if focused { isSearchActive = true }
+                            .onAppear {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    searchFocused = true
+                                }
                             }
                             .submitLabel(.search)
                         if !searchText.isEmpty {
