@@ -51,14 +51,28 @@ struct PrintPreviewView: View {
 
     // MARK: - Label preview
 
+    /// The rendered label cropped to the content area only (strips the 80 px
+    /// blank tear margin so the preview card sizes to actual content).
+    private var previewImage: UIImage {
+        let contentH = LabelRenderer.labelHeightPx - 80   // 200 px
+        let cropRect = CGRect(x: 0, y: 0,
+                              width: LabelRenderer.labelWidthPx,
+                              height: contentH)
+        if let cgImage = labelImage.cgImage?.cropping(to: cropRect) {
+            return UIImage(cgImage: cgImage,
+                           scale: labelImage.scale,
+                           orientation: labelImage.imageOrientation)
+        }
+        return labelImage
+    }
+
     private var labelPreview: some View {
-        Image(uiImage: labelImage)
+        Image(uiImage: previewImage)
             .resizable()
             .scaledToFit()
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-            )
+            .padding(16)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Persistent status badge

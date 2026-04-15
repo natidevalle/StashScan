@@ -170,7 +170,7 @@ struct ContainerDetailView: View {
                         ZStack {
                             Color(.systemGray6)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 135)
+                                .frame(height: 80)
                             VStack(spacing: 6) {
                                 Image(systemName: "camera")
                                     .font(.title2)

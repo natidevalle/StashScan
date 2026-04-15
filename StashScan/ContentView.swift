@@ -318,46 +318,73 @@ private struct SearchListView: View {
             Color.clear.frame(height: 49)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            // Custom search bar — left icon swaps between magnifier and back chevron.
-            HStack(spacing: 8) {
-                if isSearchActive {
+            if isSearchActive {
+                // Search active: pill back button + separate search input pill
+                HStack(spacing: 8) {
                     Button {
                         searchText = ""
                         isSearchActive = false
                         searchFocused = false
                     } label: {
-                        Image(systemName: "chevron.left")
-                            .foregroundStyle(.secondary)
-                            .frame(width: 20)
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .regular))
+                            Text("Locations")
+                                .font(.body)
+                        }
+                        .foregroundColor(.primary)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(Capsule())
                     }
-                } else {
+
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                            .font(.system(size: 16))
+                        TextField("Search items, containers, notes…", text: $searchText)
+                            .focused($searchFocused)
+                            .onChange(of: searchFocused) { _, focused in
+                                if focused { isSearchActive = true }
+                            }
+                            .submitLabel(.search)
+                        if !searchText.isEmpty {
+                            Button {
+                                searchText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(Color(.tertiaryLabel))
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(.systemBackground))
+            } else {
+                // Inactive: single full-width search pill
+                HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
                         .frame(width: 20)
+                    TextField("Search items, containers, notes…", text: $searchText)
+                        .focused($searchFocused)
+                        .onChange(of: searchFocused) { _, focused in
+                            if focused { isSearchActive = true }
+                        }
+                        .submitLabel(.search)
                 }
-
-                TextField("Search items, containers, notes…", text: $searchText)
-                    .focused($searchFocused)
-                    .onChange(of: searchFocused) { _, focused in
-                        if focused { isSearchActive = true }
-                    }
-                    .submitLabel(.search)
-
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(Color(.tertiaryLabel))
-                    }
-                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(.systemBackground))
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color(.systemBackground))
         }
         .overlay { emptyStateOverlay }
     }
