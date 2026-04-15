@@ -41,16 +41,17 @@ struct ContentView: View {
 
     @State private var selectedTab: AppTab = .home
     @State private var navigationPath = NavigationPath()
+    @State private var isSearchActive = false
 
-    // Home tab item is highlighted only when at the root of the home stack.
-    private var homeIsSelected: Bool { selectedTab == .home && navigationPath.isEmpty }
+    // Home tab item is highlighted only when at the root of the home stack with no active search.
+    private var homeIsSelected: Bool { selectedTab == .home && navigationPath.isEmpty && !isSearchActive }
 
     var body: some View {
         TabView(selection: $selectedTab) {
 
             // ── Home tab ───────────────────────────────────────────────
             NavigationStack(path: $navigationPath) {
-                HomeView()
+                HomeView(isSearchActive: $isSearchActive)
                     .navigationDestination(for: Location.self) {
                         LocationDetailView(location: $0)
                     }
@@ -162,8 +163,8 @@ private struct HomeView: View {
     @Query(sort: \Location.name) private var locations: [Location]
     @Query(sort: \Container.name) private var allContainers: [Container]
 
+    @Binding var isSearchActive: Bool
     @State private var searchText        = ""
-    @State private var isSearchActive    = false
     @State private var showAddLocation   = false
     @State private var locationToDelete: Location? = nil
     @State private var showDeleteConfirm = false
