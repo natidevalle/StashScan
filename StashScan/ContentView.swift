@@ -317,6 +317,11 @@ private struct SearchListView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Color.clear.frame(height: 49)
         }
+        // Re-apply focus after the inactive→active branch swap so the keyboard
+        // opens immediately without requiring a second tap.
+        .onChange(of: isSearchActive) { _, active in
+            if active { searchFocused = true }
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             if isSearchActive {
                 // Search active: pill back button + separate search input pill
@@ -326,17 +331,13 @@ private struct SearchListView: View {
                         isSearchActive = false
                         searchFocused = false
                     } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .regular))
-                            Text("Locations")
-                                .font(.body)
-                        }
-                        .foregroundColor(.primary)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(Capsule())
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.primary)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(Color(.secondarySystemBackground))
+                            .clipShape(Capsule())
                     }
 
                     HStack(spacing: 8) {
