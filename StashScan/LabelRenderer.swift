@@ -81,10 +81,10 @@ enum LabelRenderer {
             cursorY += nameHeight + 5
 
             // 2. Location path — 19 pt, up to 2 lines
-            let pathFont = UIFont.systemFont(ofSize: 19)
+            let pathFont = UIFont.systemFont(ofSize: 20)
             let pathAttrs: [NSAttributedString.Key: Any] = [
                 .font: pathFont,
-                .foregroundColor: UIColor.darkGray,
+                .foregroundColor: UIColor.black,
                 .paragraphStyle: wrapping
             ]
             let locName  = container.zone?.location?.name ?? "?"
@@ -104,10 +104,10 @@ enum LabelRenderer {
             // while still appearing lighter than darkGray (white=0.33) on screen.
             let notes = container.notes.trimmingCharacters(in: .whitespacesAndNewlines)
             if !notes.isEmpty {
-                let notesFont = UIFont.systemFont(ofSize: 14)
+                let notesFont = UIFont.systemFont(ofSize: 20)
                 let notesAttrs: [NSAttributedString.Key: Any] = [
                     .font: notesFont,
-                    .foregroundColor: UIColor(white: 0.45, alpha: 1.0),
+                    .foregroundColor: UIColor.black,
                     .paragraphStyle: truncating
                 ]
                 let notesHeight = ceil(notesFont.lineHeight) * 2   // ≈ 34 px
