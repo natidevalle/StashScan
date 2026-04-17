@@ -203,6 +203,7 @@ struct ContainerDetailView: View {
                     HStack(alignment: .firstTextBaseline) {
                         Text(container.name)
                             .font(.title2.bold())
+                            .padding(.vertical, 4)
                             .foregroundColor(.primary)
                         Spacer()
                         Text(container.type.rawValue)
