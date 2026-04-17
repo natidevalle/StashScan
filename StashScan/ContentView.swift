@@ -313,6 +313,28 @@ private struct SearchListView: View {
 
     var body: some View {
         List {
+            // ── Inactive search bar — inside the list so it renders below the large title ──
+            if !isSearchActive {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                        .font(.system(size: 17))
+                        .frame(width: 20)
+                    TextField("Search items, containers, notes…", text: $searchText)
+                        .focused($searchFocused)
+                        .onChange(of: searchFocused) { _, focused in
+                            if focused { isSearchActive = true }
+                        }
+                        .submitLabel(.search)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 10)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                .listRowBackground(Color(.systemGroupedBackground))
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+            }
+
             if isSearchActive {
                 // ── Search mode: hide location list, show results only ─
                 if !searchResults.isEmpty {
@@ -399,26 +421,6 @@ private struct SearchListView: View {
                     .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
                     .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color(.systemGroupedBackground))
-            } else {
-                // Inactive: single full-width search pill
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                        .font(.system(size: 17))
-                        .frame(width: 20)
-                    TextField("Search items, containers, notes…", text: $searchText)
-                        .focused($searchFocused)
-                        .onChange(of: searchFocused) { _, focused in
-                            if focused { isSearchActive = true }
-                        }
-                        .submitLabel(.search)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 10)
-                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(Color(.systemGroupedBackground))
