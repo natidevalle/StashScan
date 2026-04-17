@@ -176,6 +176,7 @@ struct ContainerDetailView: View {
                         .frame(height: 140)
                         .clipped()
                         .contentShape(Rectangle())
+                        .onTapGesture { showFullScreenPhoto = true }
                 } else {
                     Button { showPhotoActionSheet = true } label: {
                         ZStack {
@@ -426,7 +427,8 @@ private struct FullScreenPhotoView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Color.black.ignoresSafeArea()
+            Color.black
+                .ignoresSafeArea()
             if let image = UIImage(contentsOfFile: photoPath) {
                 Image(uiImage: image)
                     .resizable()
@@ -441,6 +443,8 @@ private struct FullScreenPhotoView: View {
                     .padding()
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
     }
 }
 
