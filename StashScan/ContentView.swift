@@ -130,7 +130,6 @@ struct ContentView: View {
             .tabItem { Label("Scan", systemImage: "qrcode.viewfinder") }
             .tag(AppTab.scan)
         }
-        .ignoresSafeArea(.keyboard)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             AppTabBar(
                 homeIsSelected:   homeIsSelected,
@@ -147,6 +146,7 @@ struct ContentView: View {
                 onScanTap:   { selectedTab = .scan }
             )
         }
+        .ignoresSafeArea(.keyboard)
     }
 }
 
