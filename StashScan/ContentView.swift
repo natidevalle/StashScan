@@ -312,14 +312,13 @@ private struct SearchListView: View {
     @Binding var showDeleteConfirm: Bool
 
     var body: some View {
-        List {
-            // ── Inactive search bar — inside the list so it renders below the large title ──
+        VStack(spacing: 0) {
+            // ── Inactive search bar — outside the List so background renders reliably ──
             if !isSearchActive {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.secondary)
                         .font(.system(size: 17))
-                        .frame(width: 20)
                     TextField("Search items, containers, notes…", text: $searchText)
                         .focused($searchFocused)
                         .onChange(of: searchFocused) { _, focused in
@@ -329,55 +328,55 @@ private struct SearchListView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color(.secondarySystemBackground))
-                }
-                .listRowBackground(Color(.systemGroupedBackground))
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
             }
 
-            if isSearchActive {
-                // ── Search mode: hide location list, show results only ─
-                if !searchResults.isEmpty {
-                    Section {
-                        ForEach(searchResults) { result in
-                            NavigationLink(value: result.containerForNav) {
-                                searchResultRow(result)
+            List {
+                if isSearchActive {
+                    // ── Search mode: hide location list, show results only ─
+                    if !searchResults.isEmpty {
+                        Section {
+                            ForEach(searchResults) { result in
+                                NavigationLink(value: result.containerForNav) {
+                                    searchResultRow(result)
+                                }
                             }
+                        } header: {
+                            Text("\(searchResults.count) result\(searchResults.count == 1 ? "" : "s")")
+                                .font(.system(size: 12, weight: .regular))
+                                .textCase(nil)
+                                .foregroundStyle(Color(.secondaryLabel))
                         }
-                    } header: {
-                        Text("\(searchResults.count) result\(searchResults.count == 1 ? "" : "s")")
-                            .font(.system(size: 12, weight: .regular))
-                            .textCase(nil)
-                            .foregroundStyle(Color(.secondaryLabel))
                     }
-                }
-            } else {
-                // ── Normal hierarchy ─────────────────────────────────
-                ForEach(locations) { location in
-                    NavigationLink(value: location) {
-                        HStack(spacing: 12) {
-                            ListIcon(symbol: "mappin.circle")
-                            Text(location.name)
-                                .font(.body)
+                } else {
+                    // ── Normal hierarchy ─────────────────────────────────
+                    ForEach(locations) { location in
+                        NavigationLink(value: location) {
+                            HStack(spacing: 12) {
+                                ListIcon(symbol: "mappin.circle")
+                                Text(location.name)
+                                    .font(.body)
+                            }
+                            .padding(.vertical, 10)
                         }
-                        .padding(.vertical, 10)
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            locationToDelete = location
-                            showDeleteConfirm = true
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                locationToDelete = location
+                                showDeleteConfirm = true
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                     }
                 }
             }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            Color.clear.frame(height: 49)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Color.clear.frame(height: 49)
+            }
+            .overlay { emptyStateOverlay }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if isSearchActive {
@@ -429,7 +428,6 @@ private struct SearchListView: View {
                 .background(Color(.systemGroupedBackground))
             }
         }
-        .overlay { emptyStateOverlay }
     }
 
     // MARK: Search row
