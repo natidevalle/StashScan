@@ -38,7 +38,7 @@ struct ZoneDetailView: View {
                         Text(container.name)
                             .font(.body)
                     }
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 4)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
@@ -78,7 +78,10 @@ struct ZoneDetailView: View {
                             .font(.system(size: 16, weight: .regular))
                         Text(zone.location?.name ?? "Back")
                             .font(.body)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
+                    .fixedSize()
                     .foregroundColor(.primary)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)

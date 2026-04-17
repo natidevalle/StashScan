@@ -230,7 +230,7 @@ private struct HomeView: View {
                         Text(location.name)
                             .font(.body)
                     }
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 4)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
@@ -475,7 +475,7 @@ private struct SearchView: View {
                 }
             }
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 4)
     }
 
     // MARK: Empty state

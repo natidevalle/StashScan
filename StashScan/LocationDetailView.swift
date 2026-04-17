@@ -38,7 +38,7 @@ struct LocationDetailView: View {
                         Text(zone.name)
                             .font(.body)
                     }
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 4)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
@@ -78,7 +78,10 @@ struct LocationDetailView: View {
                             .font(.system(size: 16, weight: .regular))
                         Text("Locations")
                             .font(.body)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
+                    .fixedSize()
                     .foregroundColor(.primary)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)

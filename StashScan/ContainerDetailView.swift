@@ -81,7 +81,10 @@ struct ContainerDetailView: View {
                             .font(.system(size: 16, weight: .regular))
                         Text(container.zone?.name ?? "Back")
                             .font(.body)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
+                    .fixedSize()
                     .foregroundColor(.primary)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
@@ -239,6 +242,7 @@ struct ContainerDetailView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
+                .background(Color(.systemBackground))
             }
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets())
