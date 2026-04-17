@@ -2,8 +2,9 @@
 //  ContentView.swift
 //  StashScan
 //
-//  Root view: TabView with Home and Scan tabs.
+//  Root view: TabView with Home, Search, and Scan tabs.
 //  Home tab hosts the full navigation stack (Locations → Zones → Containers).
+//  Search tab is a dedicated full-screen search experience.
 //
 
 import SwiftUI
@@ -67,21 +68,21 @@ enum AppRoute: Hashable {
 // MARK: - Root ContentView (TabView)
 
 struct ContentView: View {
-    enum AppTab: Hashable { case home, scan }
+    enum AppTab: Hashable { case home, search, scan }
 
     @State private var selectedTab: AppTab = .home
     @State private var navigationPath = NavigationPath()
-    @State private var isSearchActive = false
 
-    // Home tab item is highlighted only when at the root of the home stack with no active search.
-    private var homeIsSelected: Bool { selectedTab == .home && navigationPath.isEmpty && !isSearchActive }
+    private var homeIsSelected: Bool   { selectedTab == .home && navigationPath.isEmpty }
+    private var searchIsSelected: Bool { selectedTab == .search }
+    private var scanIsSelected: Bool   { selectedTab == .scan }
 
     var body: some View {
         TabView(selection: $selectedTab) {
 
             // ── Home tab ───────────────────────────────────────────────
             NavigationStack(path: $navigationPath) {
-                HomeView(isSearchActive: $isSearchActive)
+                HomeView()
                     .navigationDestination(for: Location.self) {
                         LocationDetailView(location: $0)
                     }
@@ -97,10 +98,26 @@ struct ContentView: View {
                         }
                     }
             }
-            // Hide native tab bar so our custom bar controls selection state.
             .toolbar(.hidden, for: .tabBar)
             .tabItem { Label("Home", systemImage: "house") }
             .tag(AppTab.home)
+
+            // ── Search tab ─────────────────────────────────────────────
+            NavigationStack {
+                SearchView()
+                    .navigationDestination(for: Container.self) {
+                        ContainerDetailView(container: $0)
+                    }
+                    .navigationDestination(for: Zone.self) {
+                        ZoneDetailView(zone: $0)
+                    }
+                    .navigationDestination(for: Location.self) {
+                        LocationDetailView(location: $0)
+                    }
+            }
+            .toolbar(.hidden, for: .tabBar)
+            .tabItem { Label("Search", systemImage: "magnifyingglass") }
+            .tag(AppTab.search)
 
             // ── Scan tab ───────────────────────────────────────────────
             ScannerView(onFound: { container in
@@ -114,11 +131,11 @@ struct ContentView: View {
             .tag(AppTab.scan)
         }
         .ignoresSafeArea(.keyboard)
-        // Custom tab bar: Home is highlighted only at root; tapping Home while deep pops to root.
         .safeAreaInset(edge: .bottom, spacing: 0) {
             AppTabBar(
-                homeIsSelected: homeIsSelected,
-                scanIsSelected: selectedTab == .scan,
+                homeIsSelected:   homeIsSelected,
+                searchIsSelected: searchIsSelected,
+                scanIsSelected:   scanIsSelected,
                 onHomeTap: {
                     if selectedTab == .home {
                         navigationPath = NavigationPath()
@@ -126,7 +143,8 @@ struct ContentView: View {
                         selectedTab = .home
                     }
                 },
-                onScanTap: { selectedTab = .scan }
+                onSearchTap: { selectedTab = .search },
+                onScanTap:   { selectedTab = .scan }
             )
         }
     }
@@ -135,17 +153,21 @@ struct ContentView: View {
 // MARK: - Custom tab bar
 
 private struct AppTabBar: View {
-    let homeIsSelected: Bool
-    let scanIsSelected: Bool
-    let onHomeTap: () -> Void
-    let onScanTap: () -> Void
+    let homeIsSelected:   Bool
+    let searchIsSelected: Bool
+    let scanIsSelected:   Bool
+    let onHomeTap:   () -> Void
+    let onSearchTap: () -> Void
+    let onScanTap:   () -> Void
 
     var body: some View {
         HStack(spacing: 0) {
-            tabButton("Home", symbol: "house",             selectedSymbol: "house.fill",    isSelected: homeIsSelected, action: onHomeTap)
-            .padding(.top, 20)
-            tabButton("Scan", symbol: "qrcode.viewfinder",                                isSelected: scanIsSelected, action: onScanTap)
-            .padding(.top, 20)
+            tabButton("Home",   symbol: "house",              selectedSymbol: "house.fill", isSelected: homeIsSelected,   action: onHomeTap)
+                .padding(.top, 20)
+            tabButton("Search", symbol: "magnifyingglass",                                  isSelected: searchIsSelected, action: onSearchTap)
+                .padding(.top, 20)
+            tabButton("Scan",   symbol: "qrcode.viewfinder",                                isSelected: scanIsSelected,   action: onScanTap)
+                .padding(.top, 20)
         }
         .frame(height: 49)
         .background(.bar)
@@ -189,67 +211,57 @@ private struct SearchResult: Identifiable {
     }
 }
 
-// MARK: - Home view (locations list + search)
+// MARK: - Home view (locations list only)
 
 private struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Location.name) private var locations: [Location]
-    @Query(sort: \Container.name) private var allContainers: [Container]
 
-    @Binding var isSearchActive: Bool
-    @State private var searchText        = ""
     @State private var showAddLocation   = false
     @State private var locationToDelete: Location? = nil
     @State private var showDeleteConfirm = false
 
-    private var trimmedQuery: String {
-        searchText.trimmingCharacters(in: .whitespaces)
-    }
-
-    private var searchResults: [SearchResult] {
-        guard !trimmedQuery.isEmpty else { return [] }
-        let lower = trimmedQuery.lowercased()
-        var results: [SearchResult] = []
-
-        for container in allContainers {
-            for item in container.items {
-                let itemLower = item.name.lowercased()
-                guard itemLower.contains(lower) else { continue }
-                results.append(SearchResult(
-                    kind: .item(item, container),
-                    isExact: itemLower == lower
-                ))
-            }
-            let cLower = container.name.lowercased()
-            let nLower = container.notes.lowercased()
-            if cLower.contains(lower) || nLower.contains(lower) {
-                results.append(SearchResult(
-                    kind: .container(container),
-                    isExact: cLower == lower || nLower == lower
-                ))
-            }
-        }
-
-        return results.sorted { a, b in
-            let aItem: Bool; if case .item = a.kind { aItem = true } else { aItem = false }
-            let bItem: Bool; if case .item = b.kind { bItem = true } else { bItem = false }
-            if aItem != bItem { return aItem }
-            if a.isExact != b.isExact { return a.isExact }
-            return a.containerForNav.name
-                .localizedCaseInsensitiveCompare(b.containerForNav.name) == .orderedAscending
-        }
-    }
-
     var body: some View {
-        SearchListView(
-            searchText: $searchText,
-            isSearchActive: $isSearchActive,
-            locations: locations,
-            searchResults: searchResults,
-            trimmedQuery: trimmedQuery,
-            locationToDelete: $locationToDelete,
-            showDeleteConfirm: $showDeleteConfirm
-        )
+        List {
+            ForEach(locations) { location in
+                NavigationLink(value: location) {
+                    HStack(spacing: 12) {
+                        ListIcon(symbol: "map")
+                        Text(location.name)
+                            .font(.body)
+                    }
+                    .padding(.vertical, 10)
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) {
+                        locationToDelete = location
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear.frame(height: 49)
+        }
+        .overlay {
+            if locations.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "map")
+                        .font(.system(size: 48))
+                        .foregroundColor(Color(.tertiaryLabel))
+                    Text("No Locations")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Text("Tap + to add your first location.")
+                        .font(.subheadline)
+                        .foregroundColor(Color(.secondaryLabel))
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
         .navigationTitle("Locations")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
@@ -300,78 +312,89 @@ private struct HomeView: View {
     }
 }
 
-// MARK: - Search list view
+// MARK: - Search view (dedicated Search tab)
 
-private struct SearchListView: View {
+private struct SearchView: View {
+    @Query(sort: \Container.name) private var allContainers: [Container]
     @FocusState private var searchFocused: Bool
+    @State private var searchText = ""
 
-    @Binding var searchText: String
-    @Binding var isSearchActive: Bool
-    let locations: [Location]
-    let searchResults: [SearchResult]
-    let trimmedQuery: String
-    @Binding var locationToDelete: Location?
-    @Binding var showDeleteConfirm: Bool
+    private var trimmedQuery: String {
+        searchText.trimmingCharacters(in: .whitespaces)
+    }
+
+    private var searchResults: [SearchResult] {
+        guard !trimmedQuery.isEmpty else { return [] }
+        let lower = trimmedQuery.lowercased()
+        var results: [SearchResult] = []
+
+        for container in allContainers {
+            for item in container.items {
+                let itemLower = item.name.lowercased()
+                guard itemLower.contains(lower) else { continue }
+                results.append(SearchResult(
+                    kind: .item(item, container),
+                    isExact: itemLower == lower
+                ))
+            }
+            let cLower = container.name.lowercased()
+            let nLower = container.notes.lowercased()
+            if cLower.contains(lower) || nLower.contains(lower) {
+                results.append(SearchResult(
+                    kind: .container(container),
+                    isExact: cLower == lower || nLower == lower
+                ))
+            }
+        }
+
+        return results.sorted { a, b in
+            let aItem: Bool; if case .item = a.kind { aItem = true } else { aItem = false }
+            let bItem: Bool; if case .item = b.kind { bItem = true } else { bItem = false }
+            if aItem != bItem { return aItem }
+            if a.isExact != b.isExact { return a.isExact }
+            return a.containerForNav.name
+                .localizedCaseInsensitiveCompare(b.containerForNav.name) == .orderedAscending
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            // ── Inactive search bar — outside the List so background renders reliably ──
-            if !isSearchActive {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 20))
-                    TextField("Search items, containers, notes…", text: $searchText)
-                        .focused($searchFocused)
-                        .onChange(of: searchFocused) { _, focused in
-                            if focused { isSearchActive = true }
-                        }
-                        .submitLabel(.search)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
-                //.background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 15))
-              //  .padding(.horizontal, 16)
-               // .padding(.bottom, 16)
-            }
-
-            List {
-                if isSearchActive {
-                    // ── Search mode: hide location list, show results only ─
-                    if !searchResults.isEmpty {
-                        Section {
-                            ForEach(searchResults) { result in
-                                NavigationLink(value: result.containerForNav) {
-                                    searchResultRow(result)
-                                }
-                            }
-                        } header: {
-                            Text("\(searchResults.count) result\(searchResults.count == 1 ? "" : "s")")
-                                .font(.system(size: 14, weight: .regular))
-                                .textCase(nil)
-                                .foregroundStyle(Color(.secondaryLabel))
-                        }
+            // ── Search bar ─────────────────────────────────────────────
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                    .font(.system(size: 16))
+                TextField("Search items, containers, notes…", text: $searchText)
+                    .focused($searchFocused)
+                    .submitLabel(.search)
+                if !searchText.isEmpty {
+                    Button { searchText = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(Color(.tertiaryLabel))
                     }
-                } else {
-                    // ── Normal hierarchy ─────────────────────────────────
-                    ForEach(locations) { location in
-                        NavigationLink(value: location) {
-                            HStack(spacing: 12) {
-                                ListIcon(symbol: "map")
-                                Text(location.name)
-                                    .font(.body)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 10)
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemGroupedBackground))
+
+            // ── Results list ───────────────────────────────────────────
+            List {
+                if !searchResults.isEmpty {
+                    Section {
+                        ForEach(searchResults) { result in
+                            NavigationLink(value: result.containerForNav) {
+                                searchResultRow(result)
                             }
-                            .padding(.vertical, 10)
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                locationToDelete = location
-                                showDeleteConfirm = true
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
+                    } header: {
+                        Text("\(searchResults.count) result\(searchResults.count == 1 ? "" : "s")")
+                            .font(.system(size: 14, weight: .regular))
+                            .textCase(nil)
+                            .foregroundStyle(Color(.secondaryLabel))
                     }
                 }
             }
@@ -380,54 +403,10 @@ private struct SearchListView: View {
             }
             .overlay { emptyStateOverlay }
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if isSearchActive {
-                // Search active: chevron-only pill back button + full-width search input pill
-                HStack(spacing: 8) {
-                    Button {
-                        searchText = ""
-                        isSearchActive = false
-                        searchFocused = false
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 20, weight: .regular))
-                            .foregroundColor(.primary)
-                           // .padding(.vertical, 8)
-                            //.padding(.horizontal, 8)
-                          //  .background(Color(.secondarySystemBackground))
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-
-                    HStack(spacing: 8) {
-                       // Image(systemName: "magnifyingglass")
-                       //     .foregroundStyle(.secondary)
-                       //     .font(.system(size: 16))
-                        TextField("Search items, containers, notes…", text: $searchText)
-                            .focused($searchFocused)
-                            .onAppear {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    searchFocused = true
-                                }
-                            }
-                            .submitLabel(.search)
-                        if !searchText.isEmpty {
-                            Button {
-                                searchText = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(Color(.tertiaryLabel))
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 10)
-                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
-                    .frame(maxWidth: .infinity)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color(.systemGroupedBackground))
+        .toolbar(.hidden, for: .navigationBar)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                searchFocused = true
             }
         }
     }
@@ -461,7 +440,6 @@ private struct SearchListView: View {
                         }
                     }
                     Text(
-                       // "\(container.name) · " +
                         "\(container.zone?.location?.name ?? "?") > " +
                         "\(container.zone?.name ?? "?") > " +
                         "\(container.name)"
@@ -489,21 +467,21 @@ private struct SearchListView: View {
 
     @ViewBuilder
     private var emptyStateOverlay: some View {
-        if !isSearchActive && locations.isEmpty {
+        if trimmedQuery.isEmpty {
             VStack(spacing: 12) {
-                Image(systemName: "map")
+                Image(systemName: "magnifyingglass")
                     .font(.system(size: 48))
                     .foregroundColor(Color(.tertiaryLabel))
-                Text("No Locations")
+                Text("Search")
                     .font(.headline)
                     .foregroundColor(.primary)
-                Text("Tap + to add your first location.")
+                Text("Search for items, containers, and notes.")
                     .font(.subheadline)
                     .foregroundColor(Color(.secondaryLabel))
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if isSearchActive && !trimmedQuery.isEmpty && searchResults.isEmpty {
+        } else if searchResults.isEmpty {
             ContentUnavailableView.search(text: searchText)
         }
     }
