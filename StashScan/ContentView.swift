@@ -374,12 +374,12 @@ private struct SearchView: View {
                     }
                 }
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(.systemGroupedBackground))
 
             // ── Results list ───────────────────────────────────────────
             List {
@@ -403,7 +403,9 @@ private struct SearchView: View {
             }
             .overlay { emptyStateOverlay }
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("Search")
+        .navigationBarTitleDisplayMode(.large)
+        .ignoresSafeArea(.keyboard)
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 searchFocused = true
