@@ -190,7 +190,7 @@ struct PrintPreviewView: View {
 
     private var firstTimePairingHint: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("First time using the printer?", systemImage: "info.circle")
+            Text("First time using the printer?")
                 .font(.subheadline)
                 .foregroundStyle(Color(.secondaryLabel))
             Text("Open **Settings → Bluetooth** and pair your Phomemo Q02E, then tap Connect here.")

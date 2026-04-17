@@ -36,16 +36,9 @@ struct LocationDetailView: View {
                     HStack(spacing: 12) {
                         ListIcon(symbol: "square.dashed")
                         Text(zone.name)
-                            .font(.body).fontWeight(.semibold)
-                        Spacer()
-                        let count = zone.containers.count
-                        if count > 0 {
-                            Text("\(count)")
-                                .font(.caption)
-                                .foregroundStyle(Color(.secondaryLabel))
-                        }
+                            .font(.body)
                     }
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 10)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
@@ -92,6 +85,7 @@ struct LocationDetailView: View {
                     .background(Color(.secondarySystemBackground))
                     .clipShape(Capsule())
                 }
+                .buttonStyle(.plain)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {

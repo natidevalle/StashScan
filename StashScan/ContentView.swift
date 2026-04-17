@@ -113,6 +113,7 @@ struct ContentView: View {
             .tabItem { Label("Scan", systemImage: "qrcode.viewfinder") }
             .tag(AppTab.scan)
         }
+        .ignoresSafeArea(.keyboard)
         // Custom tab bar: Home is highlighted only at root; tapping Home while deep pops to root.
         .safeAreaInset(edge: .bottom, spacing: 0) {
             AppTabBar(
@@ -248,18 +249,21 @@ private struct HomeView: View {
             showDeleteConfirm: $showDeleteConfirm
         )
         .navigationTitle("Locations")
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showAddLocation = true } label: {
                     Image(systemName: "plus")
                         .foregroundStyle(Color(.label))
                 }
+                .buttonStyle(.plain)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 NavigationLink(value: AppRoute.settings) {
                     Image(systemName: "gearshape")
                         .foregroundStyle(Color(.label))
                 }
+                .buttonStyle(.plain)
             }
         }
         .sheet(isPresented: $showAddLocation) {
@@ -334,7 +338,7 @@ private struct SearchListView: View {
                             Text(location.name)
                                 .font(.body)
                         }
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 10)
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
@@ -352,25 +356,22 @@ private struct SearchListView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if isSearchActive {
-                // Search active: pill back button + separate search input pill
+                // Search active: chevron-only pill back button + full-width search input pill
                 HStack(spacing: 8) {
                     Button {
                         searchText = ""
                         isSearchActive = false
                         searchFocused = false
                     } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .regular))
-                            Text("Locations")
-                                .font(.body)
-                        }
-                        .foregroundColor(.primary)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(Capsule())
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.primary)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(Color(.secondarySystemBackground))
+                            .clipShape(Capsule())
                     }
+                    .buttonStyle(.plain)
 
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass")
@@ -394,17 +395,19 @@ private struct SearchListView: View {
                         }
                     }
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
+                    .padding(.vertical, 10)
                     .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                    .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(Color(.systemBackground))
+                .background(Color(.systemGroupedBackground))
             } else {
                 // Inactive: single full-width search pill
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
+                        .font(.system(size: 17))
                         .frame(width: 20)
                     TextField("Search items, containers, notes…", text: $searchText)
                         .focused($searchFocused)
@@ -414,11 +417,11 @@ private struct SearchListView: View {
                         .submitLabel(.search)
                 }
                 .padding(.horizontal, 10)
-                .padding(.vertical, 7)
+                .padding(.vertical, 10)
                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(Color(.systemBackground))
+                .background(Color(.systemGroupedBackground))
             }
         }
         .overlay { emptyStateOverlay }
@@ -473,7 +476,7 @@ private struct SearchListView: View {
                 }
             }
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
     }
 
     // MARK: Empty state

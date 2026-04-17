@@ -51,6 +51,12 @@ struct ContainerDetailView: View {
         return "\(loc) > \(zone)"
     }
 
+    private var formattedTimestamp: String {
+        container.updatedAt.formatted(date: .abbreviated, time: .omitted)
+        + ", "
+        + container.updatedAt.formatted(date: .omitted, time: .shortened)
+    }
+
 
     // MARK: Body
 
@@ -82,6 +88,7 @@ struct ContainerDetailView: View {
                     .background(Color(.secondarySystemBackground))
                     .clipShape(Capsule())
                 }
+                .buttonStyle(.plain)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showEditContainer = true } label: {
@@ -225,7 +232,7 @@ struct ContainerDetailView: View {
                         Image(systemName: "clock")
                             .font(.system(size: 14))
                             .foregroundColor(Color(.secondaryLabel))
-                        Text(container.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                        Text(formattedTimestamp)
                             .font(.caption)
                             .foregroundColor(Color(.secondaryLabel))
                     }
@@ -233,9 +240,10 @@ struct ContainerDetailView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
         }
-        .listRowInsets(EdgeInsets())
-        .listRowSeparator(.hidden)
     }
 
     // MARK: - Items section

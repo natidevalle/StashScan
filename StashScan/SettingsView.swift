@@ -53,6 +53,7 @@ struct SettingsView: View {
                     .background(Color(.secondarySystemBackground))
                     .clipShape(Capsule())
                 }
+                .buttonStyle(.plain)
             }
         }
         .sheet(isPresented: $showShareSheet) {

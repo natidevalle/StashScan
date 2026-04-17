@@ -36,9 +36,9 @@ struct ZoneDetailView: View {
                     HStack(spacing: 12) {
                         ListIcon(symbol: "shippingbox")
                         Text(container.name)
-                            .font(.body).fontWeight(.semibold)
+                            .font(.body)
                     }
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 10)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
@@ -85,6 +85,7 @@ struct ZoneDetailView: View {
                     .background(Color(.secondarySystemBackground))
                     .clipShape(Capsule())
                 }
+                .buttonStyle(.plain)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
