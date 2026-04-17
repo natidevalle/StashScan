@@ -327,9 +327,12 @@ private struct SearchListView: View {
                         }
                         .submitLabel(.search)
                 }
-                .padding(.horizontal, 10)
+                .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                .background {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color(.secondarySystemBackground))
+                }
                 .listRowBackground(Color(.systemGroupedBackground))
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
