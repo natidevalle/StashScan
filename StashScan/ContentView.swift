@@ -104,7 +104,7 @@ struct ContentView: View {
 
             // ── Search tab ─────────────────────────────────────────────
             NavigationStack {
-                SearchView()
+                SearchView(selectedTab: $selectedTab)
                     .navigationDestination(for: Container.self) {
                         ContainerDetailView(container: $0)
                     }
@@ -315,6 +315,7 @@ private struct HomeView: View {
 // MARK: - Search view (dedicated Search tab)
 
 private struct SearchView: View {
+    @Binding var selectedTab: ContentView.AppTab
     @Query(sort: \Container.name) private var allContainers: [Container]
     @FocusState private var searchFocused: Bool
     @State private var searchText = ""
@@ -406,6 +407,18 @@ private struct SearchView: View {
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.large)
         .ignoresSafeArea(.keyboard)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button { selectedTab = .home } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundColor(.primary)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .clipShape(Capsule())
+                }
+            }
+        }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 searchFocused = true
