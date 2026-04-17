@@ -34,7 +34,7 @@ struct ZoneDetailView: View {
             ForEach(containers) { container in
                 NavigationLink(value: container) {
                     HStack(spacing: 12) {
-                        ListIcon(symbol: "shippingbox")
+                        ListIcon(symbol: "archivebox")
                         Text(container.name)
                             .font(.body)
                     }
@@ -56,7 +56,7 @@ struct ZoneDetailView: View {
         .overlay {
             if containers.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "shippingbox")
+                    Image(systemName: "archivebox")
                         .font(.system(size: 48))
                         .foregroundColor(Color(.tertiaryLabel))
                     Text("No Containers")
@@ -82,7 +82,7 @@ struct ZoneDetailView: View {
                     .foregroundColor(.primary)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
-                    .background(Color(.secondarySystemBackground))
+                    //.background(Color(.secondarySystemBackground))
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)

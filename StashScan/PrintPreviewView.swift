@@ -50,7 +50,7 @@ struct PrintPreviewView: View {
                         .foregroundColor(.primary)
                         .padding(.vertical, 8)
                         .padding(.horizontal, 12)
-                        .background(Color(.secondarySystemBackground))
+                   //     .background(Color(.secondarySystemBackground))
                         .clipShape(Capsule())
                     }
                 }

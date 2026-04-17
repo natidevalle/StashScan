@@ -34,7 +34,7 @@ struct LocationDetailView: View {
             ForEach(zones) { zone in
                 NavigationLink(value: zone) {
                     HStack(spacing: 12) {
-                        ListIcon(symbol: "square.dashed")
+                        ListIcon(symbol: "viewfinder")
                         Text(zone.name)
                             .font(.body)
                     }
@@ -56,7 +56,7 @@ struct LocationDetailView: View {
         .overlay {
             if zones.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "square.dashed")
+                    Image(systemName: "viewfinder")
                         .font(.system(size: 48))
                         .foregroundColor(Color(.tertiaryLabel))
                     Text("No Zones")
@@ -82,7 +82,7 @@ struct LocationDetailView: View {
                     .foregroundColor(.primary)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
-                    .background(Color(.secondarySystemBackground))
+                //    .background(Color(.secondarySystemBackground))
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)

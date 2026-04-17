@@ -143,7 +143,9 @@ private struct AppTabBar: View {
     var body: some View {
         HStack(spacing: 0) {
             tabButton("Home", symbol: "house",             selectedSymbol: "house.fill",    isSelected: homeIsSelected, action: onHomeTap)
+            .padding(.top, 20)
             tabButton("Scan", symbol: "qrcode.viewfinder",                                isSelected: scanIsSelected, action: onScanTap)
+            .padding(.top, 20)
         }
         .frame(height: 49)
         .background(.bar)
@@ -318,7 +320,7 @@ private struct SearchListView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
-                        .font(.system(size: 17))
+                        .font(.system(size: 20))
                     TextField("Search items, containers, notes…", text: $searchText)
                         .focused($searchFocused)
                         .onChange(of: searchFocused) { _, focused in
@@ -326,12 +328,12 @@ private struct SearchListView: View {
                         }
                         .submitLabel(.search)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
                 .padding(.horizontal, 16)
-                .padding(.bottom, 8)
+                .padding(.vertical, 16)
+                //.background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 15))
+              //  .padding(.horizontal, 16)
+               // .padding(.bottom, 16)
             }
 
             List {
@@ -346,7 +348,7 @@ private struct SearchListView: View {
                             }
                         } header: {
                             Text("\(searchResults.count) result\(searchResults.count == 1 ? "" : "s")")
-                                .font(.system(size: 12, weight: .regular))
+                                .font(.system(size: 14, weight: .regular))
                                 .textCase(nil)
                                 .foregroundStyle(Color(.secondaryLabel))
                         }
@@ -356,7 +358,7 @@ private struct SearchListView: View {
                     ForEach(locations) { location in
                         NavigationLink(value: location) {
                             HStack(spacing: 12) {
-                                ListIcon(symbol: "mappin.circle")
+                                ListIcon(symbol: "map")
                                 Text(location.name)
                                     .font(.body)
                             }
@@ -388,19 +390,19 @@ private struct SearchListView: View {
                         searchFocused = false
                     } label: {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .regular))
+                            .font(.system(size: 20, weight: .regular))
                             .foregroundColor(.primary)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .background(Color(.secondarySystemBackground))
+                           // .padding(.vertical, 8)
+                            //.padding(.horizontal, 8)
+                          //  .background(Color(.secondarySystemBackground))
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
 
                     HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(.secondary)
-                            .font(.system(size: 16))
+                       // Image(systemName: "magnifyingglass")
+                       //     .foregroundStyle(.secondary)
+                       //     .font(.system(size: 16))
                         TextField("Search items, containers, notes…", text: $searchText)
                             .focused($searchFocused)
                             .onAppear {
@@ -438,7 +440,7 @@ private struct SearchListView: View {
             Group {
                 switch result.kind {
                 case .item:      Image(systemName: "tag")
-                case .container: Image(systemName: "shippingbox")
+                case .container: Image(systemName: "archivebox")
                 }
             }
             .font(.system(size: 20))
@@ -459,9 +461,10 @@ private struct SearchListView: View {
                         }
                     }
                     Text(
-                        "\(container.name) · " +
+                       // "\(container.name) · " +
                         "\(container.zone?.location?.name ?? "?") > " +
-                        "\(container.zone?.name ?? "?")"
+                        "\(container.zone?.name ?? "?") > " +
+                        "\(container.name)"
                     )
                     .font(.subheadline)
                     .foregroundStyle(Color(.secondaryLabel))
@@ -488,7 +491,7 @@ private struct SearchListView: View {
     private var emptyStateOverlay: some View {
         if !isSearchActive && locations.isEmpty {
             VStack(spacing: 12) {
-                Image(systemName: "mappin.circle")
+                Image(systemName: "map")
                     .font(.system(size: 48))
                     .foregroundColor(Color(.tertiaryLabel))
                 Text("No Locations")

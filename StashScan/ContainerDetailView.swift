@@ -85,8 +85,8 @@ struct ContainerDetailView: View {
                     .foregroundColor(.primary)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(Capsule())
+                  //  .background(Color(.secondarySystemBackground))
+                   // .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
@@ -198,7 +198,7 @@ struct ContainerDetailView: View {
                     // Row 1: name + type pill
                     HStack(alignment: .firstTextBaseline) {
                         Text(container.name)
-                            .font(.title2)
+                            .font(.title2.bold())
                             .foregroundColor(.primary)
                         Spacer()
                         Text(container.type.rawValue)
@@ -219,11 +219,11 @@ struct ContainerDetailView: View {
 
                     // Row 3: location path (DS §7.2)
                     HStack(spacing: 4) {
-                        Image(systemName: "mappin.circle")
+                        Image(systemName: "location")
                             .font(.system(size: 14))
                             .foregroundColor(Color(.secondaryLabel))
                         Text(locationPath)
-                            .font(.subheadline)
+                            .font(.caption)
                             .foregroundColor(Color(.secondaryLabel))
                     }
 
@@ -391,7 +391,7 @@ struct ContainerDetailView: View {
         container.updatedAt = Date()
     }
 
-    // MARK: - Photo
+    // MARK: - Photo 
 
     private func savePhoto(_ image: UIImage) {
         if let existingURL = container.photoURL {
