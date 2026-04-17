@@ -426,7 +426,7 @@ private struct FullScreenPhotoView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack {
             Color.black
                 .ignoresSafeArea()
             if let image = UIImage(contentsOfFile: photoPath) {
@@ -435,6 +435,9 @@ private struct FullScreenPhotoView: View {
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .topTrailing) {
             Button { dismiss() } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title)
@@ -443,8 +446,11 @@ private struct FullScreenPhotoView: View {
                     .padding()
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea()
+        .gesture(
+            DragGesture().onEnded { value in
+                if value.translation.height > 50 { dismiss() }
+            }
+        )
     }
 }
 
