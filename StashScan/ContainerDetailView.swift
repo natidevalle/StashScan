@@ -23,6 +23,9 @@ struct ContainerDetailView: View {
     @State private var showPrintPreview    = false
     @State private var showDeleteConfirm   = false
     @State private var showFullScreenPhoto = false
+    @State private var itemPendingDelete: Item? = nil
+    @State private var editingItem: Item?       = nil
+    @State private var movingItem: Item?        = nil
 
     // Photo picking (placeholder tap)
     @State private var showPhotoActionSheet = false
@@ -127,7 +130,29 @@ struct ContainerDetailView: View {
             }
         }
         .sheet(isPresented: $showMoveContainer)  { MoveContainerView(container: container) }
+        .sheet(item: $editingItem) { item in
+            EditItemSheet(
+                item: item,
+                onSave: { name, qty in saveItemEdits(name: name, quantity: qty, item: item) },
+                onSaveAndMove: { name, qty in
+                    saveItemEdits(name: name, quantity: qty, item: item)
+                    editingItem = nil
+                    movingItem = item
+                },
+                onDismiss: { editingItem = nil }
+            )
+        }
         .sheet(isPresented: $showPrintPreview)   { PrintPreviewView(container: container) }
+        .sheet(item: $movingItem) { item in
+            MoveItemSheet(
+                item: item,
+                onConfirm: { destination in
+                    moveItem(item: item, to: destination)
+                    movingItem = nil
+                },
+                onDismiss: { movingItem = nil }
+            )
+        }
         .fullScreenCover(isPresented: $showFullScreenPhoto) {
             FullScreenPhotoView(photoPath: container.photoURL?.path ?? "")
         }
@@ -145,6 +170,20 @@ struct ContainerDetailView: View {
             } else {
                 Text("This container is empty.")
             }
+        }
+        .confirmationDialog(
+            "Delete \"\(itemPendingDelete?.name ?? "")\"?",
+            isPresented: Binding(
+                get: { itemPendingDelete != nil },
+                set: { if !$0 { itemPendingDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let item = itemPendingDelete { deleteItem(item) }
+                itemPendingDelete = nil
+            }
+            Button("Cancel", role: .cancel) { itemPendingDelete = nil }
         }
         // Dismiss item add row when focus moves fully away
         .onChange(of: itemFocus) { _, newFocus in
@@ -258,19 +297,21 @@ struct ContainerDetailView: View {
     private var itemsSection: some View {
         Section {
             ForEach(sortedItems) { item in
-                HStack {
-                    Text(item.name)
-                        .font(.body)
-                    Spacer()
-                    if let qty = item.quantity, qty > 0 {
-                        Text("×\(qty)")
-                            .font(.body)
-                            .foregroundStyle(Color(.secondaryLabel))
-                            .monospacedDigit()
+                ItemRowView(item: item, onTap: { editingItem = item }, onMove: { movingItem = item })
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            itemPendingDelete = item
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                        Button {
+                            movingItem = item
+                        } label: {
+                            Label("Move", systemImage: "arrow.up.right.square")
+                        }
+                        .tint(Color.dsAccent)
                     }
-                }
             }
-            .onDelete { deleteItems(at: $0) }
 
             // Inline add fields
             if isAddingItem {
@@ -389,6 +430,26 @@ struct ContainerDetailView: View {
         newItemName = ""
         newItemQty  = ""
         itemFocus   = .name   // keep keyboard open for next item
+    }
+
+    private func moveItem(item: Item, to destination: Container) {
+        let source = item.container
+        item.container = destination
+        source?.updatedAt = Date()
+        destination.updatedAt = Date()
+        try? modelContext.save()
+    }
+
+    private func saveItemEdits(name: String, quantity: Int?, item: Item) {
+        item.name     = name
+        item.quantity = quantity
+        item.container?.updatedAt = Date()
+        try? modelContext.save()
+    }
+
+    private func deleteItem(_ item: Item) {
+        guard let index = sortedItems.firstIndex(where: { $0.id == item.id }) else { return }
+        deleteItems(at: IndexSet(integer: index))
     }
 
     private func deleteItems(at offsets: IndexSet) {

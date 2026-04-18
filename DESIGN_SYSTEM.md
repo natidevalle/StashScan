@@ -3,6 +3,12 @@
 > This file is the single source of truth for all visual and interaction decisions.
 > Claude Code must reference this file before implementing any UI. When in doubt, this file overrides gut instinct.
 
+| Field | Value |
+| --- | --- |
+| Version | 1.1 — Icons updated to match app implementation |
+| Date | April 2026 |
+| Status | Source of truth for all UI decisions |
+
 ---
 
 ## 1. Principles
@@ -30,7 +36,7 @@ static let accent = Color(red: 0.702, green: 0.404, blue: 0.286) // #B3673A (app
 ```
 
 | Token | Light | Dark | Usage |
-|-------|-------|------|-------|
+| --- | --- | --- | --- |
 | `accent` | `#B3673A` | `#C97F55` | Primary interactive elements, active tab, action buttons |
 | `accentMuted` | `#E8D5C8` | `#3D2416` | Accent backgrounds, pill fills, subtle tints |
 | `accentForeground` | `#6B3318` | `#F0D5C2` | Text on accentMuted backgrounds |
@@ -56,7 +62,7 @@ static let success = Color(red: 0.20, green: 0.60, blue: 0.40) // muted green
 Use iOS semantic colours throughout. Do not hardcode greys.
 
 | Token | SwiftUI | Usage |
-|-------|---------|-------|
+| --- | --- | --- |
 | `background` | `Color(.systemBackground)` | Root screen backgrounds |
 | `secondaryBackground` | `Color(.secondarySystemBackground)` | Page/screen fill behind cards |
 | `tertiaryBackground` | `Color(.tertiarySystemBackground)` | Card backgrounds |
@@ -66,7 +72,7 @@ Use iOS semantic colours throughout. Do not hardcode greys.
 ### 2.4 Text Colours
 
 | Token | SwiftUI | Usage |
-|-------|---------|-------|
+| --- | --- | --- |
 | `textPrimary` | `Color(.label)` | All primary text |
 | `textSecondary` | `Color(.secondaryLabel)` | Metadata, paths, timestamps, counts |
 | `textTertiary` | `Color(.tertiaryLabel)` | Placeholders, hints |
@@ -83,7 +89,7 @@ Font: **SF Pro** (system default, `.body`, `.caption`, etc.)
 ### 3.1 Scale
 
 | Role | SwiftUI Style | Size (pt) | Weight | Usage |
-|------|--------------|-----------|--------|-------|
+| --- | --- | --- | --- | --- |
 | `screenTitle` | `.largeTitle` | 34 | Regular | Screen heading (Hallway, Basket, Settings) |
 | `sectionHeader` | — | 12 | Regular | ALL CAPS section labels (ITEMS, ACTIONS) |
 | `rowTitle` | `.body` | 17 | Semibold | Container names in lists, item names in search results |
@@ -111,7 +117,7 @@ Use SwiftUI defaults. Do not override `lineSpacing` unless a specific multi-line
 Base unit: **4pt**. All spacing values are multiples of 4.
 
 | Token | Value | Usage |
-|-------|-------|-------|
+| --- | --- | --- |
 | `spacing2` | 8pt | Tight gaps: icon-to-label, badge internal padding |
 | `spacing3` | 12pt | Row internal vertical padding |
 | `spacing4` | 16pt | Standard section padding, card internal padding |
@@ -131,29 +137,30 @@ All icons use **SF Symbols, outline style only**. No filled variants except the 
 These icons define the visual language of the hierarchy. They must be applied consistently everywhere an entity is represented.
 
 | Entity | SF Symbol | Notes |
-|--------|-----------|-------|
-| Location | `mappin.circle` | Outline only |
-| Zone | `square.dashed` | Used in list rows and empty state |
-| Container | `shippingbox` | Outline only |
+| --- | --- | --- |
+| Location (list item) | `map` | Outline only |
+| Zone | `viewfinder` | Used in list rows and empty state |
+| Container | `archivebox` | Outline only |
 | Item | `tag` | Outline only |
 
 ### 5.2 UI Icons
 
 | Purpose | SF Symbol | Colour |
-|---------|-----------|--------|
+| --- | --- | --- |
 | Back button chevron | `chevron.left` | `textPrimary` |
 | Edit / pencil | `pencil` | `textPrimary` |
 | Add / plus (nav bar) | `plus` | `textPrimary` |
 | Add item (inline) | `plus.circle` | `accent` |
-| Location path (inline) | `mappin.circle` | `textSecondary` |
+| Location list item | `map` | `textSecondary` |
+| Location path (inline) | `location` | `textSecondary` |
 | Timestamp (inline) | `clock` | `textSecondary` |
-| Move container | `arrow.up.right.square` | `accent` |
+| Move container / item | `arrow.up.right.square` | `accent` |
 | Print label | `printer` | `accent` |
 | Delete | `trash` | `destructive` |
 | Export backup | `arrow.up.doc` | `accent` |
 | Import backup | `arrow.down.doc` | `accent` |
 | Search | `magnifyingglass` | `textSecondary` |
-| Settings / gear | `gearshape` | `textPrimary` |
+| Settings / gear (nav bar button on Home) | `gearshape` | `textPrimary` |
 | Home tab (inactive) | `house` | `textSecondary` |
 | Home tab (active) | `house.fill` | `accent` |
 | Scan tab (inactive) | `qrcode.viewfinder` | `textSecondary` |
@@ -166,7 +173,8 @@ These icons define the visual language of the hierarchy. They must be applied co
 - Icon size inline in metadata (path, timestamp): 14pt
 - Icon size in action rows: 22pt
 - Never mix filled and outline variants of the same icon in the same context
-- Entity icons (mappin.circle, shippingbox, etc.) are always `textSecondary` in list rows, never accent
+- Entity icons (`map`, `viewfinder`, `archivebox`, `tag`) are always `textSecondary` in list rows, never accent
+- Settings is a nav bar button on the Home screen only — it is not a tab bar item
 
 ---
 
@@ -218,11 +226,11 @@ Every screen has a large title displayed as a heading below the nav bar area. Us
 Two tabs only: **Home** and **Scan**.
 
 | State | Home | Scan |
-|-------|------|------|
+| --- | --- | --- |
 | Active (root screen only) | `house.fill`, `accent` | `qrcode.viewfinder`, `accent` |
 | Inactive | `house`, `textSecondary` | `qrcode.viewfinder`, `textSecondary` |
 
-**Rule:** The Home tab is only in the active/filled state when the root Locations list is the visible screen. On all child screens (Location Detail, Zone Detail, Container Detail) the Home tab is in the inactive state.
+**Rule:** The Home tab is only in the active/filled state when the root Locations list is the visible screen. On all child screens the Home tab is inactive.
 
 ---
 
@@ -254,7 +262,7 @@ Used on: Container Detail hero, Search result rows, Label preview.
 **Implementation:**
 ```swift
 HStack(spacing: 4) {
-    Image(systemName: "mappin.circle")
+    Image(systemName: "location")
         .font(.system(size: 14))
         .foregroundColor(.secondaryLabel)
     Text("\(locationName) > \(zoneName)")
@@ -264,7 +272,7 @@ HStack(spacing: 4) {
 ```
 
 **Rules:**
-- Always uses `mappin.circle` icon at 14pt in `textSecondary`
+- Always uses `location` icon at 14pt in `textSecondary`
 - Always uses `.subheadline` (15pt Regular) in `textSecondary`
 - Always formatted as `Location > Zone`
 - No bold, no accent colour, no variation in any context
@@ -318,7 +326,7 @@ Gap between section header and the card/list below: 6pt. No more.
 
 ### 7.6 Action Rows
 
-Used in the Actions section of Container Detail.
+Used in the Actions section of Container Detail and in sheets (e.g. Move to…).
 
 ```swift
 // Standard action row
@@ -378,7 +386,7 @@ Corner radius: **12pt** for all cards. Do not use other values.
 
 ```swift
 VStack(spacing: 12) {
-    Image(systemName: "square.dashed") // Use relevant entity icon
+    Image(systemName: "viewfinder") // Use relevant entity icon — see table below
         .font(.system(size: 48))
         .foregroundColor(.tertiaryLabel)
     Text("No Zones")
@@ -391,6 +399,13 @@ VStack(spacing: 12) {
 }
 .frame(maxWidth: .infinity, maxHeight: .infinity)
 ```
+
+| Screen | Empty State Icon | Notes |
+| --- | --- | --- |
+| Location Detail (no zones) | `viewfinder` | Zone entity icon |
+| Zone Detail (no containers) | `viewfinder` | Zone entity icon, consistent with zone list rows |
+| Home (no locations) | `map` | Location entity icon |
+| Container Detail (no items) | `tag` | Item entity icon |
 
 ---
 
@@ -469,7 +484,7 @@ HStack(spacing: 12) {
 .padding(.horizontal, 16)
 .padding(.vertical, 12)
 
-// Container result — same structure, use shippingbox icon, no quantity
+// Container result — same structure, use archivebox icon, no quantity
 ```
 
 ---
@@ -536,16 +551,17 @@ VStack(alignment: .leading, spacing: 6) {
 Before shipping any screen, verify:
 
 - [ ] All back buttons use the pill + chevron + parent name pattern
-- [ ] All location paths use `mappin.circle` icon + `Location > Zone` format + `.subheadline` + `textSecondary`
-- [ ] All entity icons use the correct SF Symbol (mappin.circle / square.dashed / shippingbox / tag)
+- [ ] All location paths use `location` icon + `Location > Zone` format + `.subheadline` + `textSecondary`
+- [ ] All entity icons use the correct SF Symbol (`map` for location list / `viewfinder` for zone / `archivebox` for container / `tag` for item)
 - [ ] No hardcoded black/white text — all text uses semantic label colours
 - [ ] No text below 12pt
 - [ ] No Bold or Heavy font weights — Regular everywhere except Semibold for rowTitle in list/search
 - [ ] All cards use 12pt corner radius
 - [ ] All section headers are 12pt Regular ALL CAPS in `textSecondary`
-- [ ] Tab bar Home active state only on root Locations screen
+- [ ] Tab bar Home active state (`house.fill`) only on root Locations screen
 - [ ] Bottom scroll content clears the tab bar safe area inset
 - [ ] Accent colour (`#B3673A` light / `#C97F55` dark) applied only to interactive/active elements
+- [ ] Settings is a nav bar button on Home, not a tab
 
 ---
 
@@ -558,7 +574,7 @@ Three QR finder squares arranged in an L — top-left, top-right, bottom-left. T
 ### Colours — locked
 
 | Element | Value |
-|---------|-------|
+| --- | --- |
 | Background | `#B3673A` (clay accent) |
 | Finder squares — outer ring | `#F5EFE8` (warm sand), no fill |
 | Finder squares — inner dot | `#F5EFE8` (warm sand), filled |
@@ -573,15 +589,15 @@ All values in px at 1024×1024. The squircle mask is applied by iOS — do not c
 Canvas: 1024 × 1024
 
 Each finder square outer ring:
-  Size:        179 × 179 px
+  Size:          179 × 179 px
   Corner radius: 32 px
-  Stroke:      32 px, no fill
-  Colour:      #F5EFE8
+  Stroke:        32 px, no fill
+  Colour:        #F5EFE8
 
 Each finder square inner dot:
-  Size:        90 × 90 px
+  Size:          90 × 90 px
   Corner radius: 16 px
-  Fill:        #F5EFE8
+  Fill:          #F5EFE8
 
 Positions (top-left corner of each outer ring):
   Top-left square:     x=163,  y=163
@@ -625,7 +641,7 @@ Bottom-right corner:  empty
 ### Sizes reference
 
 | Context | Size |
-|---------|------|
+| --- | --- |
 | App Store | 1024×1024 |
 | Home screen (@3x) | 180×180 |
 | Spotlight (@3x) | 120×120 |
@@ -638,4 +654,4 @@ Dark mode app icons are not supported on iOS — one version only.
 
 ---
 
-*StashScan Design System v1.0 — April 2026*
+*StashScan Design System v1.1 — April 2026 — Icons updated to match app implementation*
