@@ -16,6 +16,7 @@ struct LocationDetailView: View {
 
     @Query private var zones: [Zone]
 
+    @State private var showEditLocation = false
     @State private var showAddZone = false
     @State private var zoneToDelete: Zone? = nil
     @State private var showZoneDeleteConfirm = false
@@ -91,6 +92,12 @@ struct LocationDetailView: View {
                 .buttonStyle(.plain)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showEditLocation = true } label: {
+                    Image(systemName: "pencil")
+                        .foregroundStyle(Color(.label))
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     showAddZone = true
                 } label: {
@@ -98,6 +105,9 @@ struct LocationDetailView: View {
                         .foregroundStyle(Color(.label))
                 }
             }
+        }
+        .sheet(isPresented: $showEditLocation) {
+            AddEditLocationView(location: location)
         }
         .sheet(isPresented: $showAddZone) {
             AddEditZoneView(location: location)

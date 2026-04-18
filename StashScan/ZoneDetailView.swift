@@ -16,6 +16,7 @@ struct ZoneDetailView: View {
 
     @Query private var containers: [Container]
 
+    @State private var showEditZone = false
     @State private var showAddContainer = false
     @State private var containerToDelete: Container? = nil
     @State private var showContainerDeleteConfirm = false
@@ -91,6 +92,12 @@ struct ZoneDetailView: View {
                 .buttonStyle(.plain)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showEditZone = true } label: {
+                    Image(systemName: "pencil")
+                        .foregroundStyle(Color(.label))
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     showAddContainer = true
                 } label: {
@@ -98,6 +105,9 @@ struct ZoneDetailView: View {
                         .foregroundStyle(Color(.label))
                 }
             }
+        }
+        .sheet(isPresented: $showEditZone) {
+            AddEditZoneView(location: zone.location ?? Location(name: ""), zone: zone)
         }
         .sheet(isPresented: $showAddContainer) {
             AddEditContainerView(zone: zone)
