@@ -76,8 +76,7 @@ StashScan/
 ├── Models/          # SwiftData models (Location, Zone, Container, Item)
 ├── Views/           # SwiftUI screens and components
 ├── PRD.md           # Product requirements
-├── DESIGN_SYSTEM.md # Visual and interaction spec
-└── FIXES_v1_1.md    # UI polish and bug fix log
+└── DESIGN_SYSTEM.md # Visual and interaction spec
 ```
 
 ---
