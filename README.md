@@ -20,14 +20,7 @@ StashScan answers one question: **where did I put it?** Label your physical stor
 
 ## Screenshots
 
-<img src=".github/screenshots/1 - Home.png" width="250" />
-<img src=".github/screenshots/2 - Zones.png" width="250" />
-<img src=".github/screenshots/3 - Containers.png" width="250" />
-<img src=".github/screenshots/4 - Container Details.png" width="250" />
-<img src=".github/screenshots/5 - Search.png" width="250" />
-<img src=".github/screenshots/6 - Search full.png" width="250" />
-<img src=".github/screenshots/7 - Settings.png" width="250" />
-<img src=".github/screenshots/8 - Print.png" width="250" />
+<img src=".github/screenshots/1 - Home.png" width="250" /><img src=".github/screenshots/2 - Zones.png" width="250" /><img src=".github/screenshots/3 - Containers.png" width="250" /><img src=".github/screenshots/4 - Container Details.png" width="250" /><img src=".github/screenshots/5 - Search.png" width="250" /><img src=".github/screenshots/6 - Search full.png" width="250" /><img src=".github/screenshots/7 - Settings.png" width="250" /><img src=".github/screenshots/8 - Print.png" width="250" />
 
 ---
 
